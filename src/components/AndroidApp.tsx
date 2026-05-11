@@ -1,6 +1,7 @@
 import { Smartphone, WifiOff, Zap, Star } from "lucide-react";
 
 const APP_URL = "https://play.google.com/store/apps/details?id=com.simplifiedtaxindia.simpliinvoice";
+const APP_LIVE = false;
 
 export const AndroidApp = () => (
   <section id="android" className="bg-gradient-hero py-16">
@@ -28,7 +29,7 @@ export const AndroidApp = () => (
                 </div>
               ))}
             </div>
-            <a href={APP_URL} target="_blank" rel="noopener noreferrer" className="mt-6 inline-flex items-center gap-3 rounded-2xl bg-foreground px-5 py-3 text-background shadow-glow transition-transform hover:-translate-y-0.5">
+            <a href={APP_LIVE ? APP_URL : "#android"} target={APP_LIVE ? "_blank" : "_self"} rel="noopener noreferrer" className="mt-6 inline-flex items-center gap-3 rounded-2xl bg-foreground px-5 py-3 text-background shadow-glow transition-transform hover:-translate-y-0.5">
               <svg viewBox="0 0 512 512" className="h-7 w-7" aria-hidden>
                 <path fill="#34A853" d="M325.3 234.3 104.7 13.7c-3.3-3.3-7.7-5.1-12.4-5.1L325.3 234.3z" />
                 <path fill="#FBBC04" d="M407.7 234.3 91.4 8.6 91.3 8.5l234 225.8 82.4 82.5c8.7-8.5 8.7-22.4 0-30.5z" />
@@ -41,6 +42,11 @@ export const AndroidApp = () => (
                 <div className="font-display text-lg font-semibold">Google Play</div>
               </div>
             </a>
+{!APP_LIVE && (
+  <p className="mt-3 text-sm text-muted-foreground">
+    Android app rolling out soon on Google Play.
+  </p>
+)}
           </div>
 
           {/* Phone mockup */}

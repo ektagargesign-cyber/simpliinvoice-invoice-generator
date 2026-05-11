@@ -170,7 +170,9 @@ export const Privacy = () => (
       <div className="mx-auto max-w-3xl space-y-3 text-sm text-muted-foreground">
         <p><strong className="text-foreground">No data leaves your browser.</strong> SimpliInvoice does not have a backend, database or login. All invoice information you type stays on your device until you close the tab.</p>
         <p>We do not collect, store, share or sell any personal or business information entered into the form.</p>
-        <p>If we add analytics or advertising in the future (e.g. Google AdSense), this section will be updated and a cookie consent will be shown where required.</p>
+        <p>SimpliInvoice may use trusted third-party services such as Vercel, Google Analytics or Google AdSense in the future to improve performance, understand traffic and support the platform. These services may use cookies or collect limited technical/browser information as per their own privacy policies.</p>
+
+<p>External links, including Play Store links and blog resources, may lead to third-party websites governed by their own privacy practices.</p>
       </div>
     </div>
   </section>
