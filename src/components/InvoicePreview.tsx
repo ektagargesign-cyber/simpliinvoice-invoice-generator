@@ -28,9 +28,16 @@ export const InvoicePreview = ({ state }: Props) => {
             <FileText className="h-6 w-6 text-white" />
           </div>
           <div>
-            <div className="font-display text-xl font-bold">SimpliInvoice</div>
-            <div className="text-[11px] uppercase tracking-[0.18em] text-white/70">Simplified Tax India</div>
-          </div>
+  <div className="font-display text-xl font-bold">
+    {state.seller.name || "Your Business Name"}
+  </div>
+
+  {state.seller.gstin && (
+    <div className="text-[11px] uppercase tracking-[0.18em] text-white/70">
+      GSTIN: {state.seller.gstin}
+    </div>
+  )}
+</div>
         </div>
         <div className="text-right">
           <div className="font-display text-lg font-semibold uppercase tracking-wider">{docTitle}</div>
@@ -227,7 +234,9 @@ export const InvoicePreview = ({ state }: Props) => {
         </div>
 
         <div className="mt-6 border-t border-slate-200 pt-3 text-center text-[10px] text-slate-400">
-          Generated with SimpliInvoice · simplifiedtaxindia.blogspot.com
+            <a href="https://simpliinvoice-invoice-generator.vercel.app" target="_blank" rel="noopener noreferrer">
+          Generated with SimpliInvoice · simpliinvoice-invoice-generator.vercel.app
+            </a>
         </div>
       </div>
     </div>
