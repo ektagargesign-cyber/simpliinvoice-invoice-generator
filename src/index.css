@@ -1,0 +1,150 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 40 33% 98%;
+    --foreground: 222 47% 11%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 222 47% 11%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 47% 11%;
+
+    --primary: 230 60% 22%;
+    --primary-foreground: 40 33% 98%;
+    --primary-glow: 230 70% 45%;
+
+    --secondary: 230 25% 95%;
+    --secondary-foreground: 230 60% 22%;
+
+    --muted: 230 20% 96%;
+    --muted-foreground: 230 12% 42%;
+
+    --accent: 38 95% 55%;
+    --accent-foreground: 230 60% 15%;
+
+    --success: 152 65% 38%;
+    --success-foreground: 0 0% 100%;
+
+    --destructive: 0 75% 55%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 230 20% 90%;
+    --input: 230 20% 92%;
+    --ring: 230 70% 45%;
+
+    --radius: 0.85rem;
+
+    --gradient-hero: radial-gradient(1200px 600px at 10% -10%, hsl(230 80% 60% / 0.18), transparent 60%),
+                     radial-gradient(900px 500px at 100% 0%, hsl(38 95% 55% / 0.15), transparent 60%),
+                     linear-gradient(180deg, hsl(40 33% 98%) 0%, hsl(230 30% 96%) 100%);
+    --gradient-primary: linear-gradient(135deg, hsl(230 60% 22%) 0%, hsl(230 70% 45%) 100%);
+    --gradient-accent: linear-gradient(135deg, hsl(38 95% 55%) 0%, hsl(28 92% 50%) 100%);
+    --gradient-card: linear-gradient(180deg, hsl(0 0% 100%) 0%, hsl(230 25% 98%) 100%);
+
+    --shadow-sm: 0 1px 2px hsl(230 40% 20% / 0.05);
+    --shadow-md: 0 4px 14px -2px hsl(230 40% 20% / 0.08);
+    --shadow-lg: 0 24px 60px -20px hsl(230 60% 22% / 0.25);
+    --shadow-glow: 0 10px 40px -10px hsl(230 70% 45% / 0.45);
+
+    --transition-base: all 200ms cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .dark {
+    --background: 230 35% 7%;
+    --foreground: 40 30% 96%;
+
+    --card: 230 30% 10%;
+    --card-foreground: 40 30% 96%;
+
+    --popover: 230 30% 10%;
+    --popover-foreground: 40 30% 96%;
+
+    --primary: 230 80% 68%;
+    --primary-foreground: 230 35% 7%;
+    --primary-glow: 230 90% 75%;
+
+    --secondary: 230 25% 14%;
+    --secondary-foreground: 40 30% 96%;
+
+    --muted: 230 25% 14%;
+    --muted-foreground: 230 12% 65%;
+
+    --accent: 38 95% 60%;
+    --accent-foreground: 230 35% 7%;
+
+    --success: 152 60% 50%;
+    --success-foreground: 230 35% 7%;
+
+    --destructive: 0 70% 60%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 230 25% 18%;
+    --input: 230 25% 16%;
+    --ring: 230 80% 68%;
+
+    --gradient-hero: radial-gradient(1200px 600px at 10% -10%, hsl(230 80% 50% / 0.25), transparent 60%),
+                     radial-gradient(900px 500px at 100% 0%, hsl(38 95% 50% / 0.18), transparent 60%),
+                     linear-gradient(180deg, hsl(230 35% 7%) 0%, hsl(230 35% 5%) 100%);
+    --gradient-primary: linear-gradient(135deg, hsl(230 80% 68%) 0%, hsl(230 90% 75%) 100%);
+    --gradient-accent: linear-gradient(135deg, hsl(38 95% 60%) 0%, hsl(28 92% 55%) 100%);
+    --gradient-card: linear-gradient(180deg, hsl(230 30% 10%) 0%, hsl(230 30% 8%) 100%);
+
+    --shadow-lg: 0 24px 60px -20px hsl(0 0% 0% / 0.6);
+    --shadow-glow: 0 10px 40px -10px hsl(230 80% 68% / 0.4);
+  }
+}
+
+@layer base {
+  * { @apply border-border; }
+  html { scroll-behavior: smooth; }
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-family: 'DM Sans', system-ui, -apple-system, sans-serif;
+    font-feature-settings: 'cv11', 'ss01';
+  }
+  h1, h2, h3, h4, h5 {
+    font-family: 'Sora', system-ui, sans-serif;
+    @apply tracking-tight;
+  }
+}
+
+@layer components {
+  .container-app { @apply mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8; }
+  .surface-card {
+    background: var(--gradient-card);
+    box-shadow: var(--shadow-md);
+    @apply rounded-2xl border border-border;
+  }
+  .text-gradient {
+    background: var(--gradient-primary);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  .accent-pill {
+    @apply inline-flex items-center gap-2 rounded-full border border-border bg-secondary/60 px-3 py-1 text-xs font-medium text-secondary-foreground backdrop-blur;
+  }
+}
+
+/* Print styles for A4 invoice */
+@media print {
+  @page { size: A4; margin: 12mm; }
+  body { background: white !important; }
+  .no-print { display: none !important; }
+  .print-only { display: block !important; }
+  .invoice-print {
+    box-shadow: none !important;
+    border: none !important;
+    border-radius: 0 !important;
+    background: white !important;
+    color: #000 !important;
+    padding: 0 !important;
+    max-width: 100% !important;
+  }
+  .invoice-print * { color: #000 !important; }
+  .invoice-print .invoice-accent { background: #1a2c5b !important; color: #fff !important; }
+}
