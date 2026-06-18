@@ -5,6 +5,7 @@ import { HowToUse, GstGuide, TaxVsBoS, CgstVsIgst, Composition, About, Contact, 
 import { BlogPromo } from "@/components/BlogPromo";
 import { AndroidApp } from "@/components/AndroidApp";
 import { Footer } from "@/components/Footer";
+import { BulkInvoice } from "@/components/BulkInvoice"; // BULK FEATURE — remove this line to disable
 
 const Index = () => {
   return (
@@ -13,6 +14,7 @@ const Index = () => {
       <main>
         <Hero />
         <InvoiceGenerator />
+        <BulkInvoice /> {/* BULK FEATURE — remove this line to disable */}
         <HowToUse />
         <GstGuide />
         <TaxVsBoS />
