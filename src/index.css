@@ -173,6 +173,22 @@
   #invoice > .grid {
     display: block !important;
   }
+  /* The sticky wrapper div around InvoicePreview retains its screen-layout
+     height when the grid collapses to block, rendering as a grey box below
+     the invoice content. Force it to shrink-wrap its content. */
+  #invoice > .grid > div {
+    position: static !important;
+    height: auto !important;
+    min-height: 0 !important;
+    overflow: visible !important;
+  }
+  /* invoice-print wrapper: kill overflow-hidden so no extra painted area
+     appears beyond the last child element */
+  .invoice-print {
+    overflow: visible !important;
+    height: auto !important;
+    min-height: 0 !important;
+  }
 
   .no-print { display: none !important; }
   .print-only { display: block !important; }
