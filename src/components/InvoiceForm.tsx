@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
-import { InvoiceState, LineItem, Party, ShipTo, Transporter, RegistrationType } from "@/lib/invoiceTypes";
+import { InvoiceState, LineItem, Party, ShipTo, Transporter, RegistrationType, BankDetails, ReceiptMode } from "@/lib/invoiceTypes";
 import { INDIAN_STATES, GST_RATES, TRANSPORT_MODES } from "@/lib/india";
+import { fileToResizedDataUrl } from "@/lib/imageUtils";
 import {
   loadBuyers,
   saveBuyer,
@@ -20,7 +21,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Trash2, Building2, User2, Truck, Receipt, FileSignature, Save, BookmarkPlus, Sparkles } from "lucide-react";
+import { Plus, Trash2, Building2, User2, Truck, Receipt, FileSignature, Save, BookmarkPlus, Sparkles, Image as ImageIcon, PenLine, Landmark, X } from "lucide-react";
+
+const RECEIPT_MODES: ReceiptMode[] = ["Cash", "Bank Transfer", "UPI", "Cheque", "NEFT/RTGS", "Other"];
 
 interface Props {
   state: InvoiceState;
@@ -86,6 +89,44 @@ export const InvoiceForm = ({ state, setState, syncKey }: Props) => {
 
   const updateParty = (key: "seller" | "buyer", field: keyof Party, value: string) =>
     setState((s) => ({ ...s, [key]: { ...s[key], [field]: value } }));
+
+  const updateBankDetails = (field: keyof BankDetails, value: string) =>
+    setState((s) => ({
+      ...s,
+      seller: { ...s.seller, bankDetails: { ...s.seller.bankDetails, [field]: value } as BankDetails },
+    }));
+
+  const [logoUploading, setLogoUploading] = useState(false);
+  const [signatureUploading, setSignatureUploading] = useState(false);
+
+  const handleLogoUpload = async (file: File | undefined) => {
+    if (!file) return;
+    setLogoUploading(true);
+    try {
+      const dataUrl = await fileToResizedDataUrl(file, 300, 150);
+      setState((s) => ({ ...s, seller: { ...s.seller, logoDataUrl: dataUrl } }));
+    } catch {
+      toast.error("Couldn't process that image — try a different file");
+    } finally {
+      setLogoUploading(false);
+    }
+  };
+
+  const handleSignatureUpload = async (file: File | undefined) => {
+    if (!file) return;
+    setSignatureUploading(true);
+    try {
+      const dataUrl = await fileToResizedDataUrl(file, 250, 100);
+      setState((s) => ({ ...s, seller: { ...s.seller, signatureDataUrl: dataUrl } }));
+    } catch {
+      toast.error("Couldn't process that image — try a different file");
+    } finally {
+      setSignatureUploading(false);
+    }
+  };
+
+  const removeLogo = () => setState((s) => ({ ...s, seller: { ...s.seller, logoDataUrl: undefined } }));
+  const removeSignature = () => setState((s) => ({ ...s, seller: { ...s.seller, signatureDataUrl: undefined } }));
 
   const updateShip = (field: keyof ShipTo, value: string) =>
     setState((s) => ({ ...s, shipTo: { ...s.shipTo, [field]: value } }));
@@ -221,11 +262,59 @@ export const InvoiceForm = ({ state, setState, syncKey }: Props) => {
           <Field label="Mobile"><Input placeholder="+91 90000 00000" value={state.seller.mobile} onChange={(e) => updateParty("seller", "mobile", e.target.value)} /></Field>
           <Field label="Email"><Input placeholder="hello@business.com" value={state.seller.email} onChange={(e) => updateParty("seller", "email", e.target.value)} /></Field>
         </div>
+
+        <div className="mt-5 grid gap-4 sm:grid-cols-2">
+          <Field label="Company Logo (optional)">
+            {state.seller.logoDataUrl ? (
+              <div className="flex items-center gap-3 rounded-lg border border-border bg-secondary/30 p-2.5">
+                <img src={state.seller.logoDataUrl} alt="Logo preview" className="h-12 w-auto max-w-[120px] rounded object-contain" />
+                <Button type="button" variant="ghost" size="sm" onClick={removeLogo} className="text-destructive hover:text-destructive">
+                  <X className="mr-1 h-3.5 w-3.5" /> Remove logo
+                </Button>
+              </div>
+            ) : (
+              <label className="flex cursor-pointer items-center gap-2 rounded-lg border border-dashed border-border bg-secondary/30 p-3 text-sm text-muted-foreground hover:bg-secondary/50">
+                <ImageIcon className="h-4 w-4" />
+                {logoUploading ? "Processing…" : "Upload logo (PNG/JPG)"}
+                <input type="file" accept="image/*" className="hidden" disabled={logoUploading} onChange={(e) => handleLogoUpload(e.target.files?.[0])} />
+              </label>
+            )}
+          </Field>
+          <Field label="Authorised Signature (optional)">
+            {state.seller.signatureDataUrl ? (
+              <div className="flex items-center gap-3 rounded-lg border border-border bg-secondary/30 p-2.5">
+                <img src={state.seller.signatureDataUrl} alt="Signature preview" className="h-10 w-auto max-w-[140px] rounded object-contain" />
+                <Button type="button" variant="ghost" size="sm" onClick={removeSignature} className="text-destructive hover:text-destructive">
+                  <X className="mr-1 h-3.5 w-3.5" /> Remove
+                </Button>
+              </div>
+            ) : (
+              <label className="flex cursor-pointer items-center gap-2 rounded-lg border border-dashed border-border bg-secondary/30 p-3 text-sm text-muted-foreground hover:bg-secondary/50">
+                <PenLine className="h-4 w-4" />
+                {signatureUploading ? "Processing…" : "Upload signature (PNG/JPG)"}
+                <input type="file" accept="image/*" className="hidden" disabled={signatureUploading} onChange={(e) => handleSignatureUpload(e.target.files?.[0])} />
+              </label>
+            )}
+          </Field>
+        </div>
+
         <div className="mt-4">
           <Button type="button" variant="outline" size="sm" onClick={handleSaveSeller}>
             <Save className="mr-2 h-4 w-4" /> Save as my default seller profile
           </Button>
         </div>
+      </SectionCard>
+
+      {/* Bank Details */}
+      <SectionCard icon={Landmark} title="Bank Details (optional)" subtitle="Shown on the invoice if Account Number is filled in. Saved with your seller profile.">
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Field label="Account Name"><Input value={state.seller.bankDetails?.accountName || ""} onChange={(e) => updateBankDetails("accountName", e.target.value)} /></Field>
+          <Field label="Account Number"><Input value={state.seller.bankDetails?.accountNumber || ""} onChange={(e) => updateBankDetails("accountNumber", e.target.value)} /></Field>
+          <Field label="IFSC Code"><Input value={state.seller.bankDetails?.ifsc || ""} onChange={(e) => updateBankDetails("ifsc", e.target.value.toUpperCase())} /></Field>
+          <Field label="Bank Name"><Input value={state.seller.bankDetails?.bankName || ""} onChange={(e) => updateBankDetails("bankName", e.target.value)} /></Field>
+          <Field label="Branch"><Input value={state.seller.bankDetails?.branch || ""} onChange={(e) => updateBankDetails("branch", e.target.value)} /></Field>
+        </div>
+        <div className="mt-3 text-xs text-muted-foreground">Use the "Save as my default seller profile" button above — bank details are part of your seller profile.</div>
       </SectionCard>
 
       {/* Buyer */}
@@ -377,6 +466,45 @@ export const InvoiceForm = ({ state, setState, syncKey }: Props) => {
           <Field label="Notes"><Textarea rows={4} placeholder="Any additional information for the customer" value={state.notes} onChange={(e) => setState((s) => ({ ...s, notes: e.target.value }))} /></Field>
           <Field label="Terms & Conditions"><Textarea rows={4} value={state.terms} onChange={(e) => setState((s) => ({ ...s, terms: e.target.value }))} /></Field>
           <Field label="Authorised Signatory Label"><Input value={state.signatory} onChange={(e) => setState((s) => ({ ...s, signatory: e.target.value }))} /></Field>
+        </div>
+      </SectionCard>
+
+      {/* Payment received */}
+      <SectionCard icon={Receipt} title="Payment Received (optional)" subtitle="Per-invoice — resets with the rest of the invoice on Reset.">
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Field label="Amount Received">
+            <Input
+              type="number"
+              min={0}
+              step="any"
+              placeholder="0.00"
+              value={state.amountReceived || ""}
+              onChange={(e) => {
+                const amount = Number(e.target.value);
+                setState((s) => ({
+                  ...s,
+                  amountReceived: amount,
+                  // Default to Cash the moment a real amount is entered, but only
+                  // if the user hasn't already picked a mode. Clearing the amount
+                  // back to 0 resets mode to NA (unset) rather than leaving a
+                  // stale "Cash" sitting on a ₹0 invoice.
+                  receiptMode: amount > 0 ? (s.receiptMode || "Cash") : "",
+                }));
+              }}
+            />
+          </Field>
+          <Field label="Mode of Receipt">
+            <Select
+              value={state.receiptMode || undefined}
+              onValueChange={(v) => setState((s) => ({ ...s, receiptMode: v as ReceiptMode }))}
+              disabled={!state.amountReceived}
+            >
+              <SelectTrigger><SelectValue placeholder="NA" /></SelectTrigger>
+              <SelectContent>
+                {RECEIPT_MODES.map((m) => <SelectItem key={m} value={m}>{m}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </Field>
         </div>
       </SectionCard>
     </div>

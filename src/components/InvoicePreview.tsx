@@ -1,5 +1,5 @@
 import { InvoiceState } from "@/lib/invoiceTypes";
-import { computeInvoiceTotals, formatNum, getDocumentTitle } from "@/lib/invoiceCalc";
+import { computeInvoiceTotals, formatNum, getDocumentTitle, calculateAmountDue } from "@/lib/invoiceCalc";
 import { numberToIndianWords } from "@/lib/numberToWords";
 import { FileText } from "lucide-react";
 
@@ -24,9 +24,17 @@ export const InvoicePreview = ({ state }: Props) => {
       {/* Header */}
       <div className="invoice-accent flex items-start justify-between gap-4 bg-[hsl(230_60%_22%)] px-7 py-6 text-white">
         <div className="flex items-center gap-3">
-          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-white/15 ring-1 ring-white/20 backdrop-blur">
-            <FileText className="h-6 w-6 text-white" />
-          </div>
+          {state.seller.logoDataUrl ? (
+            <img
+              src={state.seller.logoDataUrl}
+              alt="Logo"
+              className="max-h-[56px] w-auto max-w-[120px] rounded-lg object-contain"
+            />
+          ) : (
+            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-white/15 ring-1 ring-white/20 backdrop-blur">
+              <FileText className="h-6 w-6 text-white" />
+            </div>
+          )}
           <div>
   <div className="font-display text-xl font-bold">
     {state.seller.name || "Your Business Name"}
@@ -186,6 +194,15 @@ export const InvoicePreview = ({ state }: Props) => {
               <span>Grand Total</span>
               <span>₹ {formatNum(t.payable)}</span>
             </div>
+            {state.amountReceived > 0 && (
+              <div className="mt-2 space-y-1 border-t border-dashed border-slate-200 pt-2">
+                <Row label={`Amount Received${state.receiptMode ? ` (${state.receiptMode})` : ""}`} value={`₹ ${formatNum(state.amountReceived)}`} />
+                <Row label="Amount Due" value={`₹ ${formatNum(calculateAmountDue(t.payable, state.amountReceived))}`} strong />
+                {state.amountReceived > t.payable && (
+                  <div className="text-[10px] font-medium text-emerald-700">Advance / overpayment received</div>
+                )}
+              </div>
+            )}
           </div>
         </div>
 
@@ -211,6 +228,20 @@ export const InvoicePreview = ({ state }: Props) => {
           </div>
         )}
 
+        {/* Bank Details */}
+        {state.seller.bankDetails?.accountNumber && (
+          <div className="mt-4 rounded-lg border border-slate-200 p-3 text-xs">
+            <div className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-slate-500">Bank Details</div>
+            <div className="grid gap-2 sm:grid-cols-3">
+              {state.seller.bankDetails.accountName && <div><span className="text-slate-500">Account Name:</span> {state.seller.bankDetails.accountName}</div>}
+              <div><span className="text-slate-500">Account Number:</span> {state.seller.bankDetails.accountNumber}</div>
+              {state.seller.bankDetails.ifsc && <div><span className="text-slate-500">IFSC:</span> {state.seller.bankDetails.ifsc}</div>}
+              {state.seller.bankDetails.bankName && <div><span className="text-slate-500">Bank:</span> {state.seller.bankDetails.bankName}</div>}
+              {state.seller.bankDetails.branch && <div><span className="text-slate-500">Branch:</span> {state.seller.bankDetails.branch}</div>}
+            </div>
+          </div>
+        )}
+
         {/* Notes & Terms & Signatory */}
         <div className="mt-5 grid gap-4 sm:grid-cols-2">
           <div>
@@ -228,7 +259,14 @@ export const InvoicePreview = ({ state }: Props) => {
           <div className="flex flex-col items-end justify-end">
             <div className="mt-10 w-48 border-t border-slate-300 pt-2 text-center text-xs">
               For <strong>{state.seller.name || "Your Business"}</strong>
-              <div className="mt-6 text-[11px] text-slate-600">{state.signatory || "Authorised Signatory"}</div>
+              {state.seller.signatureDataUrl ? (
+                <div className="mt-2 flex justify-center">
+                  <img src={state.seller.signatureDataUrl} alt="Signature" className="max-h-12 w-auto max-w-[160px] object-contain" />
+                </div>
+              ) : (
+                <div className="mt-6" />
+              )}
+              <div className="text-[11px] text-slate-600">{state.signatory || "Authorised Signatory"}</div>
             </div>
           </div>
         </div>
