@@ -17,4 +17,6 @@ export const emptyState: InvoiceState = {
   notes: "",
   terms: "1. Payment due within 15 days of invoice date.\n2. Interest @ 18% p.a. on overdue payments.\n3. Subject to local jurisdiction.",
   signatory: "Authorised Signatory",
+  amountReceived: 0,
+  receiptMode: "",
 };

@@ -1,5 +1,15 @@
 export type RegistrationType = "regular" | "composition" | "unregistered";
 
+export type ReceiptMode = "" | "Cash" | "Bank Transfer" | "UPI" | "Cheque" | "NEFT/RTGS" | "Other";
+
+export interface BankDetails {
+  accountName: string;
+  accountNumber: string;
+  ifsc: string;
+  bankName: string;
+  branch: string;
+}
+
 export interface Party {
   name: string;
   gstin: string;
@@ -8,6 +18,9 @@ export interface Party {
   state: string;
   mobile: string;
   email: string;
+  logoDataUrl?: string;      // seller-only; left undefined for buyer
+  signatureDataUrl?: string; // seller-only; left undefined for buyer
+  bankDetails?: BankDetails; // seller-only; left undefined for buyer
 }
 
 export interface ShipTo {
@@ -52,6 +65,8 @@ export interface InvoiceState {
   notes: string;
   terms: string;
   signatory: string;
+  amountReceived: number;
+  receiptMode: ReceiptMode;
 }
 
 export interface ItemTotals {

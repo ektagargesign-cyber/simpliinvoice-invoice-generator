@@ -84,3 +84,13 @@ export const formatINR = (n: number): string =>
 
 export const formatNum = (n: number): string =>
   new Intl.NumberFormat("en-IN", { maximumFractionDigits: 2, minimumFractionDigits: 2 }).format(n || 0);
+
+/**
+ * Amount Due = Grand Total − Amount Received, floored at 0 so an
+ * overpayment/advance never shows as a negative amount due. Callers that
+ * want to surface an "Advance received" / "Overpaid" indicator should
+ * compare amountReceived to grandTotal separately.
+ */
+export function calculateAmountDue(grandTotal: number, amountReceived: number): number {
+  return Math.max(0, grandTotal - amountReceived);
+}
