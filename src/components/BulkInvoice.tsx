@@ -7,7 +7,7 @@
  *
  * Dependencies (add to package.json if not present):
  *   jspdf, html2canvas, jszip
- *   papaparse is already in the project (used by shadcn stack)
+ *   (no papaparse needed — CSV parsing is built-in)
  */
 
 import { useState, useRef, useCallback } from "react";
@@ -17,7 +17,6 @@ import { loadSellerProfile } from "@/lib/storage";
 import { InvoicePreview } from "@/components/InvoicePreview";
 import { Button } from "@/components/ui/button";
 import { Download, Upload, FileSpreadsheet, AlertCircle, CheckCircle2, Loader2, Info } from "lucide-react";
-import Papa from "papaparse";
 
 // ─── CSV column definitions ────────────────────────────────────────────────
 // Each column maps to a field in InvoiceState.
@@ -232,10 +231,20 @@ export const BulkInvoice = () => {
 
   // ── Export blank template CSV ──────────────────────────────────────────
   const handleExportTemplate = () => {
-    const csv = Papa.unparse({
-      fields: CSV_COLUMNS,
-      data: SAMPLE_ROWS,
-    });
+    // Native CSV builder — no papaparse needed
+    const escape = (v: unknown) => {
+      const s = String(v ?? "");
+      return s.includes(",") || s.includes('"') || s.includes("\n")
+        ? `"${s.replace(/"/g, '""')}"`
+        : s;
+    };
+    const rows = [
+      CSV_COLUMNS.join(","),
+      ...SAMPLE_ROWS.map((row) =>
+        CSV_COLUMNS.map((col) => escape((row as Record<string, unknown>)[col])).join(",")
+      ),
+    ];
+    const csv = rows.join("\n");
     const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -253,37 +262,58 @@ export const BulkInvoice = () => {
     setErrorMsg("");
     setJobs([]);
 
-    Papa.parse<CsvRow>(file, {
-      header: true,
-      skipEmptyLines: true,
-      complete: (result) => {
-        if (result.errors.length > 0) {
-          setErrorMsg(`CSV parse error: ${result.errors[0].message}`);
-          setStatus("error");
-          return;
-        }
-        if (result.data.length === 0) {
+    // Native CSV parser — no papaparse needed
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      try {
+        const text = evt.target?.result as string;
+        const lines = text.split(/\r?\n/).filter((l) => l.trim() !== "");
+        if (lines.length < 2) {
           setErrorMsg("CSV is empty — fill in at least one row.");
           setStatus("error");
           return;
         }
-        // Validate required columns
+        const parseRow = (line: string): string[] => {
+          const result: string[] = [];
+          let cur = "", inQuote = false;
+          for (let i = 0; i < line.length; i++) {
+            const ch = line[i];
+            if (ch === '"') {
+              if (inQuote && line[i + 1] === '"') { cur += '"'; i++; }
+              else inQuote = !inQuote;
+            } else if (ch === "," && !inQuote) {
+              result.push(cur); cur = "";
+            } else cur += ch;
+          }
+          result.push(cur);
+          return result;
+        };
+        const headers = parseRow(lines[0]);
+        const data: CsvRow[] = lines.slice(1).map((line) => {
+          const vals = parseRow(line);
+          const row: CsvRow = {};
+          headers.forEach((h, i) => { row[h.trim()] = (vals[i] ?? "").trim(); });
+          return row;
+        });
+        if (data.length === 0) {
+          setErrorMsg("CSV is empty — fill in at least one row.");
+          setStatus("error");
+          return;
+        }
         const missing = ["invoice_number", "buyer_name", "item_description"].filter(
-          (col) => !(col in result.data[0])
+          (col) => !(col in data[0])
         );
         if (missing.length > 0) {
           setErrorMsg(`Missing required columns: ${missing.join(", ")}. Use the exported template.`);
           setStatus("error");
           return;
         }
-
         const seller = loadSellerProfile();
         const sellerBase: InvoiceState = {
           ...emptyState,
           seller: seller || emptyState.seller,
         };
-
-        const states = rowsToInvoiceStates(result.data, sellerBase);
+        const states = rowsToInvoiceStates(data, sellerBase);
         const newJobs: InvoiceJob[] = states.map((s) => ({
           state: s,
           invoiceNumber: s.invoiceNumber,
@@ -291,12 +321,13 @@ export const BulkInvoice = () => {
         }));
         setJobs(newJobs);
         setStatus("idle");
-      },
-      error: (err) => {
-        setErrorMsg(err.message);
+      } catch (err) {
+        setErrorMsg("Failed to parse CSV: " + String(err));
         setStatus("error");
-      },
-    });
+      }
+    };
+    reader.onerror = () => { setErrorMsg("Failed to read file."); setStatus("error"); };
+    reader.readAsText(file);
 
     // Reset input so same file can be re-imported
     e.target.value = "";
