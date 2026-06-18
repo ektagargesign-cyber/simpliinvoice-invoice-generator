@@ -49,7 +49,16 @@ export const InvoiceGenerator = () => {
     setSyncKey((k) => k + 1);
   };
 
-  const handlePrint = () => window.print();
+  const handlePrint = () => {
+    const seller = state.seller.name.trim() || "Seller";
+    const invoiceNo = (state.invoiceNumber.trim() || "Draft").replace(/\//g, "-");
+    const customTitle = `${seller}_${invoiceNo}_SimpliInvoice_Free GST Invoice Generator`;
+    const originalTitle = document.title;
+    document.title = customTitle;
+    window.print();
+    setTimeout(() => { document.title = originalTitle; }, 1000);
+  };
+  
   const handleReset = () => {
     if (confirm("Clear the current invoice? This cannot be undone.")) {
       setState({ ...emptyState, items: [{ ...emptyState.items[0], id: crypto.randomUUID() }] });
