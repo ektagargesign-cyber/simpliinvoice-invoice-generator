@@ -61,7 +61,7 @@ export const InvoiceGenerator = () => {
   return (
     <section id="invoice" className="container-app py-16 sm:py-20">
       <div className="mb-10 flex flex-wrap items-end justify-between gap-4">
-        <div>
+        <div className="no-print">
           <span className="accent-pill"><Eye className="h-3.5 w-3.5 text-accent" /> Live preview</span>
           <h2 className="mt-3 font-display text-3xl font-bold sm:text-4xl">Invoice Generator</h2>
           <p className="mt-2 max-w-2xl text-muted-foreground">Fill the form on the left — your A4 invoice updates instantly on the right. When ready, hit Print to save as PDF.</p>
