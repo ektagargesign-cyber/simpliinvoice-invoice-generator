@@ -133,9 +133,35 @@
 /* Print styles for A4 invoice */
 @media print {
   @page { size: A4; margin: 12mm; }
-  body { background: white !important; }
+
+  /* Hide everything by default, then explicitly un-hide only the invoice.
+     This is what actually scopes printing to the invoice card — .no-print
+     alone only hides specific tagged elements, leaving anything untagged
+     (hero, nav, footer, etc.) free to print. */
+  body * {
+    visibility: hidden !important;
+  }
+  .invoice-print,
+  .invoice-print * {
+    visibility: visible !important;
+  }
+  .invoice-print {
+    position: absolute !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100% !important;
+    margin: 0 !important;
+  }
+
+  html, body {
+    background: white !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
   .no-print { display: none !important; }
   .print-only { display: block !important; }
+
   .invoice-print {
     box-shadow: none !important;
     border: none !important;
