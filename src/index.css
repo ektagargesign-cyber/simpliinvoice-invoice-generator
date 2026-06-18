@@ -189,5 +189,5 @@
     width: 100% !important;
   }
   .invoice-print * { color: #000 !important; }
-  .invoice-print .invoice-accent { background: #1a2c5b !important; color: #fff !important; }
+  .invoice-print .invoice-accent { background: hsl(230 60% 22%) !important; color: #fff !important; }
 }
