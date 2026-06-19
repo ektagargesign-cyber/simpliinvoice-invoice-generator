@@ -453,20 +453,31 @@ export const BulkInvoice = () => {
 
       {/* Notice */}
       <div className="mb-8 flex gap-3 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-200">
-        <Info className="mt-0.5 h-4 w-4 shrink-0" />
-        <p>
-          Bulk invoices are <strong>not synced</strong> to Google Drive or saved
-          locally. Keep your filled CSV as your record. To sync individual
-          invoices, use the main Invoice Generator above.
-        </p>
+  <Info className="mt-0.5 h-4 w-4 shrink-0" />
 
-        <p>
-          Invoices generated via <strong>Bulk Upload</strong> are exported as
-          <strong>flattened PNG-based PDFs</strong>. The invoice content is embedded as
-          images and is <strong>not text-selectable or editable</strong> within the PDF.
-        </p>
+  <div className="space-y-2">
+    <p>
+      Bulk invoices are <strong>not synced</strong> to Google Drive or saved
+      locally. Keep your filled CSV as your record. To sync individual invoices,
+      use the main Invoice Generator above.
+    </p>
 
-      </div>
+    <p>
+      Invoices generated via <strong>Bulk Upload</strong> are exported as
+      <strong> flattened PNG-based PDFs</strong>. The invoice content is embedded
+      as images and is <strong>not text-selectable or editable</strong> within
+      the PDF.
+    </p>
+    
+    <p>
+      <strong>Transporter Details</strong> (Transporter Name, Vehicle Number,
+      LR/RR Number, and E-Way Bill Number) are currently
+      <strong> not supported</strong> in Bulk Upload. Please use the main
+      Invoice Generator for invoices requiring these details.
+    </p>
+
+  </div>
+</div>
       
       {/* Seller profile block */}
       <div className="mb-8 rounded-xl border border-border bg-secondary/40 p-5">
@@ -500,7 +511,6 @@ export const BulkInvoice = () => {
             details in the Invoice Generator above, click "Save as my default seller
             profile", then return here and click Refresh.
           </p>
-        </div>
 
       </div>	  
 	   
