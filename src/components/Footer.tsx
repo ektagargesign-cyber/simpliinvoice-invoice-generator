@@ -11,6 +11,7 @@ const cols = [
     { label: "Tax Invoice vs BoS", href: "#tax-vs-bos" },
     { label: "CGST/SGST vs IGST", href: "#cgst-vs-igst" },
     { label: "Composition Rules", href: "#composition" },
+    { label: "💬 Book CA Consultation", href: "https://wa.link/tx1vxv" },
   ]},
   { title: "Company", links: [
     { label: "About", href: "#about" },

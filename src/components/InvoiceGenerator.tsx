@@ -83,6 +83,25 @@ export const InvoiceGenerator = () => {
           </Button>
         </div>
       </div>
+       
+      {/* CA Services CTA — shown on screen, hidden on print */}
+      <div className="no-print mt-6 flex items-center justify-between gap-4 rounded-xl border border-border bg-secondary/40 px-5 py-4">
+        <div>
+          <p className="text-sm font-semibold text-foreground">Need help with GST returns or bookkeeping?</p>
+          <p className="mt-0.5 text-xs text-muted-foreground">I'm a CA — book a free 15-min consultation.</p>
+        </div>
+        
+          href="https://wa.link/tx1vxv"
+          target="_blank"
+          rel="noreferrer"
+          className="shrink-0 rounded-lg bg-[#25D366] px-4 py-2 text-xs font-semibold text-white shadow hover:opacity-90"
+        >
+          💬 Chat on WhatsApp
+        </a>
+      </div>
+
+
+
 
       <div className="grid gap-8 lg:grid-cols-[1fr_1fr] xl:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)]">
         <div className="no-print">

@@ -1,4 +1,4 @@
-import { Sparkles, ShieldCheck, Zap, FileCheck2 } from "lucide-react";
+import { Sparkles, ShieldCheck, Zap, FileCheck2, HardDrive, Files } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export const Hero = () => {
@@ -8,7 +8,7 @@ export const Hero = () => {
         <div className="mx-auto max-w-3xl text-center">
           <span className="accent-pill animate-fade-in-up">
             <Sparkles className="h-3.5 w-3.5 text-accent" />
-            CA-backed · 100% Free · Browser-only privacy
+            CA-backed · Free · Auto-saves Data · Bulk Invoices · No Signup Needed
           </span>
           <h1 className="mt-6 animate-fade-in-up font-display text-4xl font-bold leading-[1.1] sm:text-5xl lg:text-6xl">
             Premium <span className="text-gradient">GST invoices</span><br className="hidden sm:block" />
@@ -27,12 +27,14 @@ export const Hero = () => {
             </Button>
           </div>
 
-          <div className="mt-12 grid grid-cols-2 gap-4 sm:grid-cols-4">
+          <div className="mt-12 grid grid-cols-2 gap-4 sm:grid-cols-3">
             {[
               { icon: ShieldCheck, label: "100% in-browser" },
-              { icon: Zap, label: "Live calculations" },
-              { icon: FileCheck2, label: "GST-compliant" },
+              { icon: Zap, label: "Bulk invoices" },
+              { icon: FileCheck2, label: "GST + HSN compliant" },
               { icon: Sparkles, label: "Print-to-PDF ready" },
+              { icon: HardDrive, label: "Auto-saves your data" },
+              { icon: Files, label: "No signup needed" },
             ].map((f) => (
               <div key={f.label} className="surface-card flex flex-col items-center gap-2 px-3 py-4">
                 <f.icon className="h-5 w-5 text-primary" />
