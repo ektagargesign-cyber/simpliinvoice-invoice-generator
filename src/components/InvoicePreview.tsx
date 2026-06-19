@@ -228,29 +228,32 @@ export const InvoicePreview = ({ state }: Props) => {
           </div>
         )}
 
-        {/* Bank Details */}
-        {state.seller.bankDetails?.accountNumber && (
+        {/* Bank Details and UPI QR */}
+        {(state.seller.bankDetails?.accountNumber || state.seller.upiQrDataUrl) && (
           <div className="mt-4 rounded-lg border border-slate-200 p-3 text-xs">
-            <div className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-slate-500">Bank Details</div>
-            <div className="grid gap-2 sm:grid-cols-3">
-              {state.seller.bankDetails.accountName && <div><span className="text-slate-500">Account Name:</span> {state.seller.bankDetails.accountName}</div>}
-              <div><span className="text-slate-500">Account Number:</span> {state.seller.bankDetails.accountNumber}</div>
-              {state.seller.bankDetails.ifsc && <div><span className="text-slate-500">IFSC:</span> {state.seller.bankDetails.ifsc}</div>}
-              {state.seller.bankDetails.bankName && <div><span className="text-slate-500">Bank:</span> {state.seller.bankDetails.bankName}</div>}
-              {state.seller.bankDetails.branch && <div><span className="text-slate-500">Branch:</span> {state.seller.bankDetails.branch}</div>}
+            <div className="flex gap-4">
+              <div className="flex-1">
+                <div className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-slate-500">Bank Details</div>
+                <div className="grid gap-2 sm:grid-cols-3">
+                  {state.seller.bankDetails?.accountName && <div><span className="text-slate-500">Account Name:</span> {state.seller.bankDetails.accountName}</div>}
+                  {state.seller.bankDetails?.accountNumber && <div><span className="text-slate-500">Account Number:</span> {state.seller.bankDetails.accountNumber}</div>}
+                  {state.seller.bankDetails?.ifsc && <div><span className="text-slate-500">IFSC:</span> {state.seller.bankDetails.ifsc}</div>}
+                  {state.seller.bankDetails?.bankName && <div><span className="text-slate-500">Bank:</span> {state.seller.bankDetails.bankName}</div>}
+                  {state.seller.bankDetails?.branch && <div><span className="text-slate-500">Branch:</span> {state.seller.bankDetails.branch}</div>}
+                </div>
+              </div>
+              {state.seller.upiQrDataUrl && (
+                <div className="flex shrink-0 flex-col items-center text-center">
+                  <div className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-slate-500">UPI QR</div>
+                  <img src={state.seller.upiQrDataUrl} alt="UPI QR" className="h-20 w-20 object-contain" />
+                  <div className="mt-1 text-[10px] text-slate-500">Scan to pay</div>
+                </div>
+              )}
             </div>
           </div>
         )}
 
-        {/* UPI QR Code */}
-        {state.seller.upiQrDataUrl && (
-          <div className="mt-4 rounded-lg border border-slate-200 p-3 text-xs">
-            <div className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-slate-500">UPI Payment QR</div>
-            <img src={state.seller.upiQrDataUrl} alt="UPI QR" className="h-24 w-24 object-contain" />
-            <div className="mt-1 text-slate-500">Scan to pay via UPI</div>
-          </div>
-        )}
-
+  
         {/* Notes & Terms & Signatory */}
         <div className="mt-5 grid gap-4 sm:grid-cols-2">
           <div>
