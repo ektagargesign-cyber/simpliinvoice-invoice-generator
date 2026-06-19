@@ -242,6 +242,15 @@ export const InvoicePreview = ({ state }: Props) => {
           </div>
         )}
 
+        {/* UPI QR Code */}
+        {state.seller.upiQrDataUrl && (
+          <div className="mt-4 rounded-lg border border-slate-200 p-3 text-xs">
+            <div className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-slate-500">UPI Payment QR</div>
+            <img src={state.seller.upiQrDataUrl} alt="UPI QR" className="h-24 w-24 object-contain" />
+            <div className="mt-1 text-slate-500">Scan to pay via UPI</div>
+          </div>
+        )}
+
         {/* Notes & Terms & Signatory */}
         <div className="mt-5 grid gap-4 sm:grid-cols-2">
           <div>

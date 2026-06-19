@@ -98,6 +98,7 @@ export const InvoiceForm = ({ state, setState, syncKey }: Props) => {
 
   const [logoUploading, setLogoUploading] = useState(false);
   const [signatureUploading, setSignatureUploading] = useState(false);
+  const [upiQrUploading, setUpiQrUploading] = useState(false);
 
   const handleLogoUpload = async (file: File | undefined) => {
     if (!file) return;
@@ -127,6 +128,21 @@ export const InvoiceForm = ({ state, setState, syncKey }: Props) => {
 
   const removeLogo = () => setState((s) => ({ ...s, seller: { ...s.seller, logoDataUrl: undefined } }));
   const removeSignature = () => setState((s) => ({ ...s, seller: { ...s.seller, signatureDataUrl: undefined } }));
+
+  const handleUpiQrUpload = async (file: File | undefined) => {
+    if (!file) return;
+    setUpiQrUploading(true);
+    try {
+      const dataUrl = await fileToResizedDataUrl(file, 200, 200);
+      setState((s) => ({ ...s, seller: { ...s.seller, upiQrDataUrl: dataUrl } }));
+    } catch {
+      toast.error("Couldn't process that image — try a different file");
+    } finally {
+      setUpiQrUploading(false);
+    }
+  };
+  const removeUpiQr = () => setState((s) => ({ ...s, seller: { ...s.seller, upiQrDataUrl: undefined } }));
+
 
   const updateShip = (field: keyof ShipTo, value: string) =>
     setState((s) => ({ ...s, shipTo: { ...s.shipTo, [field]: value } }));
@@ -293,6 +309,23 @@ export const InvoiceForm = ({ state, setState, syncKey }: Props) => {
                 <PenLine className="h-4 w-4" />
                 {signatureUploading ? "Processing…" : "Upload signature (PNG/JPG)"}
                 <input type="file" accept="image/*" className="hidden" disabled={signatureUploading} onChange={(e) => handleSignatureUpload(e.target.files?.[0])} />
+              </label>
+            )}
+          </Field>
+
+          <Field label="UPI QR Code (optional)">
+            {state.seller.upiQrDataUrl ? (
+              <div className="flex items-center gap-3 rounded-lg border border-border bg-secondary/30 p-2.5">
+                <img src={state.seller.upiQrDataUrl} alt="UPI QR preview" className="h-14 w-14 rounded object-contain" />
+                <Button type="button" variant="ghost" size="sm" onClick={removeUpiQr} className="text-destructive hover:text-destructive">
+                  <X className="mr-1 h-3.5 w-3.5" /> Remove
+                </Button>
+              </div>
+            ) : (
+              <label className="flex cursor-pointer items-center gap-2 rounded-lg border border-dashed border-border bg-secondary/30 p-3 text-sm text-muted-foreground hover:bg-secondary/50">
+                <ImageIcon className="h-4 w-4" />
+                {upiQrUploading ? "Processing…" : "Upload UPI QR image (PNG/JPG)"}
+                <input type="file" accept="image/*" className="hidden" disabled={upiQrUploading} onChange={(e) => handleUpiQrUpload(e.target.files?.[0])} />
               </label>
             )}
           </Field>
