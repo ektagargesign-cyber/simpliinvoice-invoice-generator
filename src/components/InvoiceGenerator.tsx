@@ -90,7 +90,7 @@ export const InvoiceGenerator = () => {
           <p className="text-sm font-semibold text-foreground">Need help with GST returns or bookkeeping?</p>
           <p className="mt-0.5 text-xs text-muted-foreground">I'm a CA — book a free 15-min consultation.</p>
         </div>
-        
+        <a
           href="https://wa.link/tx1vxv"
           target="_blank"
           rel="noreferrer"
