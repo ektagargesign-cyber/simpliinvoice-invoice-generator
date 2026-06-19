@@ -12,12 +12,14 @@ const SectionHead = ({ icon: Icon, eyebrow, title, lead }: { icon: any; eyebrow:
 export const HowToUse = () => (
   <section id="how-to-use" className="container-app py-16">
     <SectionHead icon={ListChecks} eyebrow="Getting started" title="How to use SimpliInvoice" lead="A quick walkthrough — most users finish their first invoice in under two minutes." />
-    <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+    <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
       {[
-        { n: "01", t: "Pick registration type", d: "Choose Regular GST, Composition or Unregistered for the seller. The document type updates automatically." },
-        { n: "02", t: "Add business & customer", d: "Fill seller and buyer details. Toggle Ship To if the goods are delivered to a different address." },
-        { n: "03", t: "Add line items", d: "Enter description, HSN/SAC, qty, rate, discount and GST rate. Totals calculate live." },
-        { n: "04", t: "Print or save PDF", d: "Click Print to send to your printer or use 'Save as PDF' from the print dialog." },
+        { n: "01", t: "Pick registration type", d: "Choose Regular GST, Composition or Unregistered. The document type — Tax Invoice or Bill of Supply — updates automatically." },
+        { n: "02", t: "Add business & customer details", d: "Fill seller and buyer details. Your data auto-saves — next time it loads automatically. Toggle Ship To for a different delivery address." },
+        { n: "03", t: "Add line items", d: "Enter description, HSN/SAC, qty, rate, discount and GST rate. CGST/SGST/IGST and totals calculate live." },
+        { n: "04", t: "Add logo, signature & UPI QR", d: "Upload your business logo and signature image. Add a UPI QR code so customers can pay directly from the invoice." },
+        { n: "05", t: "Bulk invoices", d: "Need multiple invoices at once? Use the Bulk Invoice feature to generate and print several invoices in one go." },
+        { n: "06", t: "Print or save PDF", d: "Click Print / Save PDF. Your invoice is named automatically with your business name and invoice number." },
       ].map((s) => (
         <div key={s.n} className="surface-card p-5">
           <div className="text-xs font-semibold tracking-widest text-accent">{s.n}</div>
@@ -145,7 +147,7 @@ export const About = () => (
       <div className="mx-auto max-w-3xl space-y-4 text-sm text-muted-foreground">
         <p>SimpliInvoice is a 100% browser-based GST invoicing tool. It is designed for Indian small businesses, freelancers, consultants, traders and service providers who need a clean, GST-compliant invoice without the complexity (or cost) of full ERP software.</p>
         <p>Built by the team behind <strong className="text-foreground">Simplified Tax India</strong>, our blog dedicated to making GST, income tax and compliance easy for everyday business owners. We are not a registered GST suvidha provider — we simply build helpful, free tools.</p>
-        <p>This is V1 — single-invoice, browser-only. Multi-invoice management, customer database and recurring invoices are on the roadmap.</p>
+        <p>SimpliInvoice supports single and bulk invoice generation, auto-saves your seller and buyer data locally, and lets you add your logo, signature and UPI QR to every invoice — all without any login or backend.</p>
       </div>
     </div>
   </section>
@@ -159,6 +161,15 @@ export const Contact = () => (
       <a href="https://simplifiedtaxindia.blogspot.com" target="_blank" rel="noreferrer" className="mt-4 inline-flex rounded-lg bg-gradient-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground shadow-md-soft hover:opacity-90">
         Visit Simplified Tax India →
       </a>
+      <div className="mt-6 border-t border-border pt-6">
+        <p className="text-sm text-muted-foreground">Need help with GST, accounts or tax compliance? Connect directly with our CA.</p>
+        <a href="https://wa.link/tx1vxv" target="_blank" rel="noreferrer" className="mt-3 inline-flex rounded-lg bg-[#25D366] px-5 py-2.5 text-sm font-semibold text-white shadow-md-soft hover:opacity-90">
+          💬 Chat with CA on WhatsApp
+        </a>
+      </div>
+
+
+
     </div>
   </section>
 );
@@ -172,7 +183,9 @@ export const Privacy = () => (
         <p>We do not collect, store, share or sell any personal or business information entered into the form.</p>
         <p>SimpliInvoice may use trusted third-party services such as Vercel, Google Analytics or Google AdSense in the future to improve performance, understand traffic and support the platform. These services may use cookies or collect limited technical/browser information as per their own privacy policies.</p>
 
-<p>External links, including Play Store links and blog resources, may lead to third-party websites governed by their own privacy practices.</p>
+        <p>Files you upload (logo, signature, UPI QR image) are stored only in your browser's local storage. They are never uploaded to any server.</p>
+        <p>Google Drive Sync is an optional feature available on request. If enabled, your invoice data is synced to your own Google Drive account using Google's OAuth. We do not store your Google credentials or access any data beyond what you explicitly sync.</p>
+        <p>External links, including Play Store links and blog resources, may lead to third-party websites governed by their own privacy practices.</p>
       </div>
     </div>
   </section>
@@ -196,6 +209,7 @@ export const Disclaimer = () => (
       <div className="mx-auto max-w-3xl space-y-3 text-sm text-muted-foreground">
         <p>The content and tool on SimpliInvoice are intended to provide general guidance, not professional tax advice. GST law and rates change frequently.</p>
         <p>For decisions specific to your business, please consult a qualified Chartered Accountant or tax practitioner. Simplified Tax India and the SimpliInvoice tool are not a substitute for professional advice.</p>
+        <p>CA consultation services offered via SimpliInvoice are provided independently and are separate from the free tool. Engagement terms, fees and scope are agreed directly between the client and the CA.</p>
       </div>
     </div>
   </section>
