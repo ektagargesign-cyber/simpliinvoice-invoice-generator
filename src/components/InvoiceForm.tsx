@@ -230,6 +230,19 @@ export const InvoiceForm = ({ state, setState, syncKey }: Props) => {
 
   const showGstCols = state.sellerType === "regular";
 
+  // Auto-fill Place of Supply from buyer GSTIN (first 2 digits = state code)
+  const GSTIN_STATE_CODES: Record<string, string> = {
+    "01":"Jammu & Kashmir","02":"Himachal Pradesh","03":"Punjab","04":"Chandigarh",
+    "05":"Uttarakhand","06":"Haryana","07":"Delhi","08":"Rajasthan","09":"Uttar Pradesh",
+    "10":"Bihar","11":"Sikkim","12":"Arunachal Pradesh","13":"Nagaland","14":"Manipur",
+    "15":"Mizoram","16":"Tripura","17":"Meghalaya","18":"Assam","19":"West Bengal",
+    "20":"Jharkhand","21":"Odisha","22":"Chhattisgarh","23":"Madhya Pradesh",
+    "24":"Gujarat","25":"Daman & Diu","26":"Dadra & Nagar Haveli","27":"Maharashtra",
+    "28":"Andhra Pradesh","29":"Karnataka","30":"Goa","31":"Lakshadweep",
+    "32":"Kerala","33":"Tamil Nadu","34":"Puducherry","35":"Andaman & Nicobar Islands",
+    "36":"Telangana","37":"Andhra Pradesh (New)","38":"Ladakh","97":"Other Territory",
+  };
+
   return (
     <div className="space-y-6">
       {/* Registration */}
@@ -380,9 +393,29 @@ export const InvoiceForm = ({ state, setState, syncKey }: Props) => {
         )}
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label="Customer Name"><Input placeholder="e.g. Customer Pvt Ltd" value={state.buyer.name} onChange={(e) => updateParty("buyer", "name", e.target.value)} /></Field>
-          <Field label="GSTIN (optional)"><Input placeholder="GSTIN of customer" value={state.buyer.gstin} onChange={(e) => updateParty("buyer", "gstin", e.target.value.toUpperCase())} /></Field>
+          <Field label="GSTIN (optional)">
+            <Input
+              placeholder="GSTIN of customer"
+              value={state.buyer.gstin}
+              onChange={(e) => {
+                const gstin = e.target.value.toUpperCase();
+                updateParty("buyer", "gstin", gstin);
+                if (gstin.length >= 2) {
+                  const code = gstin.substring(0, 2);
+                  const detectedState = GSTIN_STATE_CODES[code];
+                  if (detectedState) {
+                    updateParty("buyer", "state", detectedState);
+                    setState((s) => ({ ...s, placeOfSupply: detectedState }));
+                  }
+                }
+              }}
+            />
+          </Field>
           <Field label="MSME / Udyam Number"><Input placeholder="UDYAM number (optional)" value={state.buyer.msme} onChange={(e) => updateParty("buyer", "msme", e.target.value)} /></Field>
-          <Field label="State"><StateSelect value={state.buyer.state} onChange={(v) => updateParty("buyer", "state", v)} /></Field>
+          <Field label="State"><StateSelect value={state.buyer.state} onChange={(v) => {
+            updateParty("buyer", "state", v);
+            setState((s) => ({ ...s, placeOfSupply: v }));
+          }} /></Field>
           <div className="sm:col-span-2"><Field label="Address"><Textarea rows={2} placeholder="Street, City, PIN" value={state.buyer.address} onChange={(e) => updateParty("buyer", "address", e.target.value)} /></Field></div>
           <Field label="Mobile"><Input placeholder="+91 90000 00000" value={state.buyer.mobile} onChange={(e) => updateParty("buyer", "mobile", e.target.value)} /></Field>
           <Field label="Email"><Input placeholder="customer@email.com" value={state.buyer.email} onChange={(e) => updateParty("buyer", "email", e.target.value)} /></Field>
