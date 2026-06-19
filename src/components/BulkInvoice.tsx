@@ -459,6 +459,13 @@ export const BulkInvoice = () => {
           locally. Keep your filled CSV as your record. To sync individual
           invoices, use the main Invoice Generator above.
         </p>
+
+        <p>
+          Invoices generated via <strong>Bulk Upload</strong> are exported as
+          <strong>flattened PNG-based PDFs</strong>. The invoice content is embedded as
+          images and is <strong>not text-selectable or editable</strong> within the PDF.
+        </p>
+
       </div>
       
       {/* Seller profile block */}
@@ -476,7 +483,7 @@ export const BulkInvoice = () => {
           </div>
         ) : (
           <div className="mt-2 flex flex-wrap items-center gap-3">
-            <p className="text-sm text-destructive">No seller profile saved yet.</p>
+            <p className="text-sm text-destructive">No seller profile saved yet or want to change seller profile.</p>
             <Button variant="outline" size="sm" onClick={() => {
               document.getElementById("invoice")?.scrollIntoView({ behavior: "smooth" });
             }}>
@@ -485,6 +492,16 @@ export const BulkInvoice = () => {
             <p className="w-full text-xs text-muted-foreground">Fill your business details in the Invoice Generator above → click "Save as my default seller profile" → come back here and click Refresh.</p>
           </div>
         )}
+
+
+        {/* ALWAYS SHOW THIS */}
+          <p className="mt-3 text-xs text-muted-foreground">
+            To change the seller profile used for bulk invoices, update the seller
+            details in the Invoice Generator above, click "Save as my default seller
+            profile", then return here and click Refresh.
+          </p>
+        </div>
+
       </div>	  
 	   
       {/* Step cards */}
