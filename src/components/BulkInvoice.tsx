@@ -3,365 +3,167 @@
  *
  * Self-contained bulk invoice feature.
  * To remove: delete this file and comment out <BulkInvoice /> in Index.tsx.
+ * No other files were modified for this feature.
  *
- * Dependencies:
- *   @react-pdf/renderer  — text-based PDF generation (replaces html2canvas + jspdf)
- *   jszip                — ZIP bundling
- *
- * Install: npm install @react-pdf/renderer jszip
- * Remove:  npm uninstall jspdf html2canvas   (no longer needed)
+ * Dependencies (add to package.json if not present):
+ *   jspdf, html2canvas, jszip
+ *   (no papaparse needed — CSV parsing is built-in)
  */
-
-import { useState, useCallback } from "react";
-import { Document, Page, Text, View, StyleSheet, pdf } from "@react-pdf/renderer";
+ 
+import { loadSellerProfile, loadBuyers } from "@/lib/storage";
+import type { Party } from "@/lib/invoiceTypes";
+import { useState, useRef, useCallback } from "react";
 import { InvoiceState, LineItem } from "@/lib/invoiceTypes";
 import { emptyState } from "@/lib/invoiceDefaults";
 import { loadSellerProfile } from "@/lib/storage";
+import { InvoicePreview } from "@/components/InvoicePreview";
 import { Button } from "@/components/ui/button";
-import {
-  Download, Upload, FileSpreadsheet, AlertCircle,
-  CheckCircle2, Loader2, Info, RefreshCw,
-} from "lucide-react";
+import { Download, Upload, FileSpreadsheet, AlertCircle, CheckCircle2, Loader2, Info } from "lucide-react";
 
 // ─── CSV column definitions ────────────────────────────────────────────────
+// Each column maps to a field in InvoiceState.
+// Rows sharing the same invoice_number are grouped into one invoice.
 
 const CSV_COLUMNS = [
-  "invoice_number", "invoice_date", "place_of_supply", "notes", "terms", "signatory",
-  "buyer_name", "buyer_gstin", "buyer_msme", "buyer_address", "buyer_state", "buyer_mobile", "buyer_email",
-  "ship_to_name", "ship_to_address", "ship_to_state", "ship_to_gstin",
-  "item_description", "item_hsn", "item_qty", "item_rate", "item_discount", "item_gst_rate",
-  "amount_received", "receipt_mode",
+  // Invoice meta
+  "invoice_number",
+  "invoice_date",
+  "place_of_supply",
+  "notes",
+  "terms",
+  "signatory",
+  // Buyer
+  "buyer_name",
+  "buyer_gstin",
+  "buyer_msme",
+  "buyer_address",
+  "buyer_state",
+  "buyer_mobile",
+  "buyer_email",
+  // Ship To (optional — leave blank to skip)
+  "ship_to_name",
+  "ship_to_address",
+  "ship_to_state",
+  "ship_to_gstin",
+  // Line item (one row per item; repeat invoice_number for multi-item)
+  "item_description",
+  "item_hsn",
+  "item_qty",
+  "item_rate",
+  "item_discount",
+  "item_gst_rate",
+  // Payment (optional)
+  "amount_received",
+  "receipt_mode",
 ];
 
 const SAMPLE_ROWS = [
   {
-    invoice_number: "INV-001", invoice_date: "2025-06-01", place_of_supply: "Maharashtra",
-    notes: "", terms: "Payment due within 15 days.", signatory: "Authorised Signatory",
-    buyer_name: "Acme Corp", buyer_gstin: "27AABCU9603R1ZX", buyer_msme: "",
-    buyer_address: "123 MG Road, Mumbai", buyer_state: "Maharashtra", buyer_mobile: "", buyer_email: "",
-    ship_to_name: "", ship_to_address: "", ship_to_state: "", ship_to_gstin: "",
-    item_description: "Web Design Services", item_hsn: "998314", item_qty: "1",
-    item_rate: "50000", item_discount: "0", item_gst_rate: "18", amount_received: "0", receipt_mode: "",
+    invoice_number: "INV-001",
+    invoice_date: new Date().toISOString().slice(0, 10),
+    place_of_supply: "Maharashtra",
+    notes: "",
+    terms: "Payment due within 15 days.",
+    signatory: "Authorised Signatory",
+    buyer_name: "Acme Corp",
+    buyer_gstin: "27AABCU9603R1ZX",
+    buyer_msme: "",
+    buyer_address: "123 MG Road, Mumbai",
+    buyer_state: "Maharashtra",
+    buyer_mobile: "",
+    buyer_email: "",
+    ship_to_name: "",
+    ship_to_address: "",
+    ship_to_state: "",
+    ship_to_gstin: "",
+    item_description: "Web Design Services",
+    item_hsn: "998314",
+    item_qty: "1",
+    item_rate: "50000",
+    item_discount: "0",
+    item_gst_rate: "18",
+    amount_received: "0",
+    receipt_mode: "",
   },
   {
-    invoice_number: "INV-001", invoice_date: "2025-06-01", place_of_supply: "Maharashtra",
-    notes: "", terms: "Payment due within 15 days.", signatory: "Authorised Signatory",
-    buyer_name: "Acme Corp", buyer_gstin: "27AABCU9603R1ZX", buyer_msme: "",
-    buyer_address: "123 MG Road, Mumbai", buyer_state: "Maharashtra", buyer_mobile: "", buyer_email: "",
-    ship_to_name: "", ship_to_address: "", ship_to_state: "", ship_to_gstin: "",
-    item_description: "SEO Consultation", item_hsn: "998313", item_qty: "2",
-    item_rate: "5000", item_discount: "0", item_gst_rate: "18", amount_received: "0", receipt_mode: "",
+    // Second item on same invoice — same invoice_number
+    invoice_number: "INV-001",
+    invoice_date: new Date().toISOString().slice(0, 10),
+    place_of_supply: "Maharashtra",
+    notes: "",
+    terms: "Payment due within 15 days.",
+    signatory: "Authorised Signatory",
+    buyer_name: "Acme Corp",
+    buyer_gstin: "27AABCU9603R1ZX",
+    buyer_msme: "",
+    buyer_address: "123 MG Road, Mumbai",
+    buyer_state: "Maharashtra",
+    buyer_mobile: "",
+    buyer_email: "",
+    ship_to_name: "",
+    ship_to_address: "",
+    ship_to_state: "",
+    ship_to_gstin: "",
+    item_description: "SEO Consultation",
+    item_hsn: "998313",
+    item_qty: "2",
+    item_rate: "5000",
+    item_discount: "0",
+    item_gst_rate: "18",
+    amount_received: "0",
+    receipt_mode: "",
   },
   {
-    invoice_number: "INV-002", invoice_date: "2025-06-05", place_of_supply: "Delhi",
-    notes: "", terms: "Payment due within 15 days.", signatory: "Authorised Signatory",
-    buyer_name: "Beta Ltd", buyer_gstin: "", buyer_msme: "",
-    buyer_address: "45 Connaught Place, New Delhi", buyer_state: "Delhi",
-    buyer_mobile: "+91 98765 43210", buyer_email: "accounts@beta.in",
-    ship_to_name: "", ship_to_address: "", ship_to_state: "", ship_to_gstin: "",
-    item_description: "Logo Design", item_hsn: "998389", item_qty: "1",
-    item_rate: "15000", item_discount: "10", item_gst_rate: "18",
-    amount_received: "5000", receipt_mode: "UPI",
+    // Second invoice
+    invoice_number: "INV-002",
+    invoice_date: new Date().toISOString().slice(0, 10),
+    place_of_supply: "Delhi",
+    notes: "",
+    terms: "Payment due within 15 days.",
+    signatory: "Authorised Signatory",
+    buyer_name: "Beta Ltd",
+    buyer_gstin: "",
+    buyer_msme: "",
+    buyer_address: "45 Connaught Place, New Delhi",
+    buyer_state: "Delhi",
+    buyer_mobile: "+91 98765 43210",
+    buyer_email: "accounts@beta.in",
+    ship_to_name: "",
+    ship_to_address: "",
+    ship_to_state: "",
+    ship_to_gstin: "",
+    item_description: "Logo Design",
+    item_hsn: "998389",
+    item_qty: "1",
+    item_rate: "15000",
+    item_discount: "10",
+    item_gst_rate: "18",
+    amount_received: "5000",
+    receipt_mode: "UPI",
   },
 ];
 
-// ─── Date parser — handles YYYY-MM-DD, DD-MM-YYYY, DD/MM/YYYY, MM/DD/YYYY ──
+// ─── CSV → InvoiceState grouping ──────────────────────────────────────────
+
+type CsvRow = Record<string, string>;
 
 function parseDate(raw: string): string {
   if (!raw?.trim()) return new Date().toISOString().slice(0, 10);
   const s = raw.trim();
+  // Already YYYY-MM-DD
   if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+  // DD-MM-YYYY or DD/MM/YYYY
   const dmy = s.match(/^(\d{1,2})[-/](\d{1,2})[-/](\d{4})$/);
-  if (dmy) return `${dmy[3]}-${dmy[2].padStart(2, "0")}-${dmy[1].padStart(2, "0")}`;
+  if (dmy) return `${dmy[3]}-${dmy[2].padStart(2,"0")}-${dmy[1].padStart(2,"0")}`;
+  // MM/DD/YYYY (US Excel default)
   const mdy = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
-  if (mdy) return `${mdy[3]}-${mdy[1].padStart(2, "0")}-${mdy[2].padStart(2, "0")}`;
+  if (mdy) return `${mdy[3]}-${mdy[1].padStart(2,"0")}-${mdy[2].padStart(2,"0")}`;
+  // Fallback
   return new Date().toISOString().slice(0, 10);
 }
 
-function formatDateDisplay(iso: string): string {
-  if (!iso) return "";
-  const [y, m, d] = iso.split("-");
-  return d && m && y ? `${d}/${m}/${y}` : iso;
-}
-
-// ─── GST calculation ───────────────────────────────────────────────────────
-
-function calcTotals(state: InvoiceState) {
-  const isGst = state.sellerType === "regular";
-  const isIntrastate = state.seller.state === state.placeOfSupply;
-  let totalTaxable = 0, totalCgst = 0, totalSgst = 0, totalIgst = 0;
-
-  const lines = state.items.map((it) => {
-    const taxable = Math.max(0, it.qty * it.rate - (it.discount || 0));
-    const cgst = isGst && isIntrastate ? (taxable * it.gstRate) / 200 : 0;
-    const sgst = cgst;
-    const igst = isGst && !isIntrastate ? (taxable * it.gstRate) / 100 : 0;
-    totalTaxable += taxable;
-    totalCgst += cgst;
-    totalSgst += sgst;
-    totalIgst += igst;
-    return { ...it, taxable, cgst, sgst, igst, lineTotal: taxable + cgst + sgst + igst };
-  });
-
-  const grandTotal = totalTaxable + totalCgst + totalSgst + totalIgst;
-  return { lines, totalTaxable, totalCgst, totalSgst, totalIgst, grandTotal, isIntrastate, isGst };
-}
-
-// ─── PDF styles ────────────────────────────────────────────────────────────
-
-const S = StyleSheet.create({
-  page: { fontFamily: "Helvetica", fontSize: 9, padding: 28, color: "#111", backgroundColor: "#fff" },
-
-  // Header
-  header: { flexDirection: "row", justifyContent: "space-between", marginBottom: 14 },
-  companyName: { fontSize: 15, fontFamily: "Helvetica-Bold", marginBottom: 3 },
-  companyDetail: { fontSize: 8, color: "#555", marginBottom: 1.5 },
-  docTitle: { fontSize: 13, fontFamily: "Helvetica-Bold", textAlign: "right", color: "#222" },
-  metaLine: { fontSize: 8, color: "#555", textAlign: "right", marginTop: 2 },
-
-  divider: { borderBottomWidth: 1, borderBottomColor: "#e5e7eb", marginVertical: 8 },
-
-  // Party boxes
-  partiesRow: { flexDirection: "row", marginBottom: 10 },
-  partyBox: { flex: 1, borderWidth: 1, borderColor: "#e5e7eb", borderRadius: 4, padding: 7, marginRight: 6 },
-  partyBoxLast: { flex: 1, borderWidth: 1, borderColor: "#e5e7eb", borderRadius: 4, padding: 7 },
-  partyLabel: { fontSize: 7, fontFamily: "Helvetica-Bold", color: "#888", marginBottom: 4 },
-  partyName: { fontSize: 10, fontFamily: "Helvetica-Bold", marginBottom: 2 },
-  partyDetail: { fontSize: 8, color: "#444", marginBottom: 1.5 },
-
-  // Table
-  tableHeader: { flexDirection: "row", backgroundColor: "#f3f4f6", borderBottomWidth: 1, borderBottomColor: "#d1d5db", paddingVertical: 5, paddingHorizontal: 3 },
-  tableRow: { flexDirection: "row", borderBottomWidth: 1, borderBottomColor: "#f0f0f0", paddingVertical: 4, paddingHorizontal: 3 },
-  tableRowAlt: { flexDirection: "row", borderBottomWidth: 1, borderBottomColor: "#f0f0f0", paddingVertical: 4, paddingHorizontal: 3, backgroundColor: "#f9fafb" },
-  th: { fontSize: 7, fontFamily: "Helvetica-Bold", color: "#555" },
-  td: { fontSize: 8 },
-
-  // Column widths (must add to 100%)
-  cNo:      { width: "4%" },
-  cDesc:    { width: "26%" },
-  cHsn:     { width: "9%" },
-  cQty:     { width: "6%", textAlign: "right" },
-  cRate:    { width: "9%", textAlign: "right" },
-  cDisc:    { width: "6%", textAlign: "right" },
-  cTaxable: { width: "12%", textAlign: "right" },
-  cGst1:    { width: "10%", textAlign: "right" },
-  cGst2:    { width: "10%", textAlign: "right" },
-  cIgst:    { width: "20%", textAlign: "right" },
-  cTotal:   { width: "8%", textAlign: "right" },
-
-  // Totals block
-  totalsSection: { alignItems: "flex-end", marginTop: 4, marginBottom: 10 },
-  totalRow: { flexDirection: "row", paddingVertical: 2 },
-  totalLabel: { fontSize: 8, color: "#555", width: 110, textAlign: "right", marginRight: 10 },
-  totalValue: { fontSize: 8, width: 70, textAlign: "right" },
-  grandRow: { flexDirection: "row", backgroundColor: "#111", borderRadius: 3, paddingVertical: 5, paddingHorizontal: 8, marginTop: 4 },
-  grandLabel: { fontSize: 9, fontFamily: "Helvetica-Bold", color: "#fff", width: 110, textAlign: "right", marginRight: 10 },
-  grandValue: { fontSize: 9, fontFamily: "Helvetica-Bold", color: "#fff", width: 70, textAlign: "right" },
-
-  // Transporter
-  transportBox: { borderWidth: 1, borderColor: "#e5e7eb", borderRadius: 4, padding: 7, marginBottom: 10 },
-  transportRow: { flexDirection: "row", flexWrap: "wrap" },
-  transportItem: { fontSize: 8, color: "#444", marginRight: 16, marginBottom: 2 },
-
-  // Footer
-  footerRow: { flexDirection: "row", marginTop: 10 },
-  notesBox: { flex: 1, marginRight: 12 },
-  signBox: { width: 150, borderWidth: 1, borderColor: "#e5e7eb", borderRadius: 4, padding: 8, alignItems: "flex-end" },
-  footerLabel: { fontSize: 7, fontFamily: "Helvetica-Bold", color: "#888", marginBottom: 3 },
-  footerText: { fontSize: 8, color: "#444" },
-  signSpacer: { height: 28 },
-  signName: { fontSize: 8, fontFamily: "Helvetica-Bold", marginTop: 2 },
-  signRole: { fontSize: 7, color: "#888", marginTop: 1 },
-
-  compositionNote: { fontSize: 7, color: "#888", textAlign: "center", marginTop: 10 },
-  poweredBy: { fontSize: 7, color: "#ccc", textAlign: "center", marginTop: 14 },
-});
-
-// ─── InvoicePDF component ─────────────────────────────────────────────────
-
-const InvoicePDF = ({ state }: { state: InvoiceState }) => {
-  const { lines, totalTaxable, totalCgst, totalSgst, totalIgst, grandTotal, isIntrastate, isGst } = calcTotals(state);
-  const fmt = (n: number) => "₹ " + n.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-
-  const docType =
-    state.sellerType === "regular" ? "TAX INVOICE"
-    : state.sellerType === "composition" ? "BILL OF SUPPLY"
-    : "INVOICE";
-
-  const hasTransporter = !!(state.transporter?.name || state.transporter?.vehicle || state.transporter?.lr);
-  const hasNotes = !!(state.notes?.trim());
-  const hasTerms = !!(state.terms?.trim());
-
-  return (
-    <Document>
-      <Page size="A4" style={S.page}>
-
-        {/* ── Header ── */}
-        <View style={S.header}>
-          <View>
-            <Text style={S.companyName}>{state.seller.name || "—"}</Text>
-            {state.seller.gstin   && <Text style={S.companyDetail}>GSTIN: {state.seller.gstin}</Text>}
-            {state.seller.msme    && <Text style={S.companyDetail}>MSME/Udyam: {state.seller.msme}</Text>}
-            {state.seller.address && <Text style={S.companyDetail}>{state.seller.address}</Text>}
-            {state.seller.state   && <Text style={S.companyDetail}>{state.seller.state}</Text>}
-            {state.seller.mobile  && <Text style={S.companyDetail}>Mob: {state.seller.mobile}</Text>}
-            {state.seller.email   && <Text style={S.companyDetail}>{state.seller.email}</Text>}
-          </View>
-          <View>
-            <Text style={S.docTitle}>{docType}</Text>
-            <Text style={S.metaLine}>Invoice No: {state.invoiceNumber || "—"}</Text>
-            <Text style={S.metaLine}>Date: {formatDateDisplay(state.invoiceDate)}</Text>
-            {state.placeOfSupply && <Text style={S.metaLine}>Place of Supply: {state.placeOfSupply}</Text>}
-          </View>
-        </View>
-
-        <View style={S.divider} />
-
-        {/* ── Bill To / Ship To ── */}
-        <View style={S.partiesRow}>
-          <View style={state.shipToEnabled ? S.partyBox : S.partyBoxLast}>
-            <Text style={S.partyLabel}>BILL TO</Text>
-            <Text style={S.partyName}>{state.buyer.name || "—"}</Text>
-            {state.buyer.gstin   && <Text style={S.partyDetail}>GSTIN: {state.buyer.gstin}</Text>}
-            {state.buyer.msme    && <Text style={S.partyDetail}>MSME: {state.buyer.msme}</Text>}
-            {state.buyer.address && <Text style={S.partyDetail}>{state.buyer.address}</Text>}
-            {state.buyer.state   && <Text style={S.partyDetail}>{state.buyer.state}</Text>}
-            {state.buyer.mobile  && <Text style={S.partyDetail}>Mob: {state.buyer.mobile}</Text>}
-            {state.buyer.email   && <Text style={S.partyDetail}>{state.buyer.email}</Text>}
-          </View>
-          {state.shipToEnabled && (
-            <View style={S.partyBoxLast}>
-              <Text style={S.partyLabel}>SHIP TO</Text>
-              {state.shipTo.name    && <Text style={S.partyName}>{state.shipTo.name}</Text>}
-              {state.shipTo.gstin   && <Text style={S.partyDetail}>GSTIN: {state.shipTo.gstin}</Text>}
-              {state.shipTo.address && <Text style={S.partyDetail}>{state.shipTo.address}</Text>}
-              {state.shipTo.state   && <Text style={S.partyDetail}>{state.shipTo.state}</Text>}
-            </View>
-          )}
-        </View>
-
-        {/* ── Line Items ── */}
-        {/* Header row */}
-        <View style={S.tableHeader}>
-          <Text style={[S.th, S.cNo]}>#</Text>
-          <Text style={[S.th, S.cDesc]}>Description</Text>
-          <Text style={[S.th, S.cHsn]}>HSN/SAC</Text>
-          <Text style={[S.th, S.cQty]}>Qty</Text>
-          <Text style={[S.th, S.cRate]}>Rate</Text>
-          <Text style={[S.th, S.cDisc]}>Disc</Text>
-          <Text style={[S.th, S.cTaxable]}>Taxable</Text>
-          {isGst && isIntrastate  && <Text style={[S.th, S.cGst1]}>CGST</Text>}
-          {isGst && isIntrastate  && <Text style={[S.th, S.cGst2]}>SGST</Text>}
-          {isGst && !isIntrastate && <Text style={[S.th, S.cIgst]}>IGST</Text>}
-          <Text style={[S.th, S.cTotal]}>Total</Text>
-        </View>
-
-        {/* Data rows */}
-        {lines.map((it, i) => (
-          <View key={it.id} style={i % 2 === 0 ? S.tableRow : S.tableRowAlt}>
-            <Text style={[S.td, S.cNo]}>{i + 1}</Text>
-            <Text style={[S.td, S.cDesc]}>{it.description}</Text>
-            <Text style={[S.td, S.cHsn]}>{it.hsn}</Text>
-            <Text style={[S.td, S.cQty]}>{it.qty}</Text>
-            <Text style={[S.td, S.cRate]}>{it.rate.toLocaleString("en-IN")}</Text>
-            <Text style={[S.td, S.cDisc]}>{it.discount || 0}</Text>
-            <Text style={[S.td, S.cTaxable]}>{it.taxable.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</Text>
-            {isGst && isIntrastate  && <Text style={[S.td, S.cGst1]}>{it.cgst.toFixed(2)} ({it.gstRate / 2}%)</Text>}
-            {isGst && isIntrastate  && <Text style={[S.td, S.cGst2]}>{it.sgst.toFixed(2)} ({it.gstRate / 2}%)</Text>}
-            {isGst && !isIntrastate && <Text style={[S.td, S.cIgst]}>{it.igst.toFixed(2)} ({it.gstRate}%)</Text>}
-            <Text style={[S.td, S.cTotal]}>{it.lineTotal.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</Text>
-          </View>
-        ))}
-
-        {/* ── Totals ── */}
-        <View style={S.totalsSection}>
-          <View style={S.totalRow}>
-            <Text style={S.totalLabel}>Subtotal (Taxable)</Text>
-            <Text style={S.totalValue}>{fmt(totalTaxable)}</Text>
-          </View>
-          {isGst && isIntrastate && (
-            <>
-              <View style={S.totalRow}>
-                <Text style={S.totalLabel}>CGST</Text>
-                <Text style={S.totalValue}>{fmt(totalCgst)}</Text>
-              </View>
-              <View style={S.totalRow}>
-                <Text style={S.totalLabel}>SGST</Text>
-                <Text style={S.totalValue}>{fmt(totalSgst)}</Text>
-              </View>
-            </>
-          )}
-          {isGst && !isIntrastate && (
-            <View style={S.totalRow}>
-              <Text style={S.totalLabel}>IGST</Text>
-              <Text style={S.totalValue}>{fmt(totalIgst)}</Text>
-            </View>
-          )}
-          <View style={S.grandRow}>
-            <Text style={S.grandLabel}>Grand Total</Text>
-            <Text style={S.grandValue}>{fmt(grandTotal)}</Text>
-          </View>
-        </View>
-
-        {/* ── Transporter ── */}
-        {hasTransporter && (
-          <View style={S.transportBox}>
-            <Text style={[S.partyLabel, { marginBottom: 4 }]}>TRANSPORTER DETAILS</Text>
-            <View style={S.transportRow}>
-              {state.transporter.name    && <Text style={S.transportItem}>Name: {state.transporter.name}</Text>}
-              {state.transporter.gstin   && <Text style={S.transportItem}>GSTIN: {state.transporter.gstin}</Text>}
-              {state.transporter.vehicle && <Text style={S.transportItem}>Vehicle: {state.transporter.vehicle}</Text>}
-              {state.transporter.lr      && <Text style={S.transportItem}>LR/GR: {state.transporter.lr}</Text>}
-              {state.transporter.date    && <Text style={S.transportItem}>Date: {formatDateDisplay(state.transporter.date)}</Text>}
-              {state.transporter.mode    && <Text style={S.transportItem}>Mode: {state.transporter.mode}</Text>}
-              {state.transporter.ewb     && <Text style={S.transportItem}>E-way Bill: {state.transporter.ewb}</Text>}
-            </View>
-          </View>
-        )}
-
-        {/* ── Notes, Terms, Signatory ── */}
-        <View style={S.footerRow}>
-          <View style={S.notesBox}>
-            {hasNotes && (
-              <>
-                <Text style={S.footerLabel}>NOTES</Text>
-                <Text style={[S.footerText, { marginBottom: 8 }]}>{state.notes}</Text>
-              </>
-            )}
-            {hasTerms && (
-              <>
-                <Text style={S.footerLabel}>TERMS & CONDITIONS</Text>
-                <Text style={S.footerText}>{state.terms}</Text>
-              </>
-            )}
-          </View>
-          <View style={S.signBox}>
-            <Text style={S.footerLabel}>FOR {(state.seller.name || "").toUpperCase()}</Text>
-            <View style={S.signSpacer} />
-            <Text style={S.signRole}>Authorised Signatory</Text>
-            {state.signatory && state.signatory !== "Authorised Signatory" && (
-              <Text style={S.signName}>{state.signatory}</Text>
-            )}
-          </View>
-        </View>
-
-        {state.sellerType === "composition" && (
-          <Text style={S.compositionNote}>
-            Composition Dealer — Not eligible to collect tax on supplies
-          </Text>
-        )}
-
-        <Text style={S.poweredBy}>Generated by SimpliInvoice · SimplifiedTaxIndia.com</Text>
-      </Page>
-    </Document>
-  );
-};
-
-// ─── CSV → InvoiceState ───────────────────────────────────────────────────
-
-type CsvRow = Record<string, string>;
-
 function rowsToInvoiceStates(rows: CsvRow[], sellerBase: InvoiceState): InvoiceState[] {
+  // Group rows by invoice_number (preserving order of first appearance)
   const groups = new Map<string, CsvRow[]>();
   for (const row of rows) {
     const key = row.invoice_number?.trim() || `row_${Math.random()}`;
@@ -393,7 +195,7 @@ function rowsToInvoiceStates(rows: CsvRow[], sellerBase: InvoiceState): InvoiceS
     const state: InvoiceState = {
       ...sellerBase,
       invoiceNumber: first.invoice_number?.trim() || "",
-      invoiceDate: parseDate(first.invoice_date),      // ← fixed: handles all date formats
+      invoiceDate: parseDate(first.invoice_date),
       placeOfSupply: first.place_of_supply?.trim() || "",
       notes: first.notes?.trim() || "",
       terms: first.terms?.trim() || sellerBase.terms,
@@ -440,17 +242,19 @@ export const BulkInvoice = () => {
   const [status, setStatus] = useState<GenerationStatus>("idle");
   const [errorMsg, setErrorMsg] = useState("");
   const [progress, setProgress] = useState({ done: 0, total: 0 });
-
-  // ── Seller profile state (visible, refreshable) ──────────────────────────
-  const [bulkSeller, setBulkSeller] = useState(() => loadSellerProfile());
+  const [currentPreview, setCurrentPreview] = useState<InvoiceState | null>(null);
+  const [bulkSeller, setBulkSeller] = useState<ReturnType<typeof loadSellerProfile>>(loadSellerProfile);
+  const previewRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // ── Export template CSV ───────────────────────────────────────────────────
+  // ── Export blank template CSV ──────────────────────────────────────────
   const handleExportTemplate = () => {
+    // Native CSV builder — no papaparse needed
     const escape = (v: unknown) => {
       const s = String(v ?? "");
       return s.includes(",") || s.includes('"') || s.includes("\n")
-        ? `"${s.replace(/"/g, '""')}"` : s;
+        ? `"${s.replace(/"/g, '""')}"`
+        : s;
     };
     const rows = [
       CSV_COLUMNS.join(","),
@@ -458,7 +262,8 @@ export const BulkInvoice = () => {
         CSV_COLUMNS.map((col) => escape((row as Record<string, unknown>)[col])).join(",")
       ),
     ];
-    const blob = new Blob([rows.join("\n")], { type: "text/csv;charset=utf-8;" });
+    const csv = rows.join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
@@ -467,7 +272,7 @@ export const BulkInvoice = () => {
     URL.revokeObjectURL(url);
   };
 
-  // ── Import filled CSV ─────────────────────────────────────────────────────
+  // ── Import filled CSV ──────────────────────────────────────────────────
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -475,6 +280,7 @@ export const BulkInvoice = () => {
     setErrorMsg("");
     setJobs([]);
 
+    // Native CSV parser — no papaparse needed
     const reader = new FileReader();
     reader.onload = (evt) => {
       try {
@@ -520,13 +326,17 @@ export const BulkInvoice = () => {
           setStatus("error");
           return;
         }
-        // Use the seller profile visible in the UI (not silently re-read from storage)
         const sellerBase: InvoiceState = {
           ...emptyState,
           seller: bulkSeller || emptyState.seller,
         };
         const states = rowsToInvoiceStates(data, sellerBase);
-        setJobs(states.map((s) => ({ state: s, invoiceNumber: s.invoiceNumber, status: "pending" })));
+        const newJobs: InvoiceJob[] = states.map((s) => ({
+          state: s,
+          invoiceNumber: s.invoiceNumber,
+          status: "pending",
+        }));
+        setJobs(newJobs);
         setStatus("idle");
       } catch (err) {
         setErrorMsg("Failed to parse CSV: " + String(err));
@@ -535,32 +345,74 @@ export const BulkInvoice = () => {
     };
     reader.onerror = () => { setErrorMsg("Failed to read file."); setStatus("error"); };
     reader.readAsText(file);
+
+    // Reset input so same file can be re-imported
     e.target.value = "";
   };
 
-  // ── Generate PDFs (text-based via @react-pdf/renderer) ───────────────────
+  // ── Generate all PDFs and ZIP ──────────────────────────────────────────
   const handleGenerate = useCallback(async () => {
     if (jobs.length === 0) return;
     setStatus("generating");
     setProgress({ done: 0, total: jobs.length });
 
     try {
-      const { default: JSZip } = await import("jszip");
+      // Dynamically import heavy libs so they don't affect initial page load
+      const [{ default: jsPDF }, { default: html2canvas }, { default: JSZip }] =
+        await Promise.all([
+          import("jspdf"),
+          import("html2canvas"),
+          import("jszip"),
+        ]);
+
       const zip = new JSZip();
 
       for (let i = 0; i < jobs.length; i++) {
         const job = jobs[i];
-        const blob = await pdf(<InvoicePDF state={job.state} />).toBlob();
 
-        const seller = (job.state.seller.name || "Seller").trim();
-        const invNo = (job.invoiceNumber || `invoice-${i + 1}`).replace(/\//g, "-");
-        const filename = `${seller}_${invNo}_SimpliInvoice.pdf`;
-        zip.file(filename, blob);
+        // Render invoice into hidden preview div
+        setCurrentPreview(job.state);
+        // Wait for React to paint
+        await new Promise((r) => setTimeout(r, 300));
 
-        setJobs((prev) => prev.map((j, idx) => idx === i ? { ...j, status: "done" } : j));
+        if (!previewRef.current) continue;
+
+        const canvas = await html2canvas(previewRef.current, {
+          scale: 3,
+          useCORS: true,
+          backgroundColor: "#ffffff",
+          logging: false,
+        });
+
+        const imgData = canvas.toDataURL("image/png");
+        const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+
+        const pageW = pdf.internal.pageSize.getWidth();
+        const pageH = pdf.internal.pageSize.getHeight();
+        const imgW = pageW;
+        const imgH = (canvas.height * pageW) / canvas.width;
+
+        let yPos = 0;
+        let remaining = imgH;
+
+        // Multi-page support: slice image across pages
+        while (remaining > 0) {
+          pdf.addImage(imgData, "PNG", 0, -yPos, imgW, imgH);
+          remaining -= pageH;
+          yPos += pageH;
+          if (remaining > 0) pdf.addPage();
+        }
+
+        const filename = `${job.invoiceNumber || `invoice-${i + 1}`}.pdf`;
+        zip.file(filename, pdf.output("blob"));
+
+        setJobs((prev) =>
+          prev.map((j, idx) => (idx === i ? { ...j, status: "done" } : j))
+        );
         setProgress({ done: i + 1, total: jobs.length });
       }
 
+      // Download ZIP
       const zipBlob = await zip.generateAsync({ type: "blob" });
       const url = URL.createObjectURL(zipBlob);
       const a = document.createElement("a");
@@ -568,15 +420,18 @@ export const BulkInvoice = () => {
       a.download = `simpliinvoice-bulk-${new Date().toISOString().slice(0, 10)}.zip`;
       a.click();
       URL.revokeObjectURL(url);
+
+      setCurrentPreview(null);
       setStatus("done");
     } catch (err) {
       console.error(err);
-      setErrorMsg("PDF generation failed. Make sure @react-pdf/renderer and jszip are installed.");
+      setErrorMsg("PDF generation failed. Make sure jspdf, html2canvas and jszip are installed.");
       setStatus("error");
+      setCurrentPreview(null);
     }
   }, [jobs]);
 
-  // ── UI ────────────────────────────────────────────────────────────────────
+  // ── UI ─────────────────────────────────────────────────────────────────
   const isGenerating = status === "generating";
 
   return (
@@ -591,80 +446,58 @@ export const BulkInvoice = () => {
         </h2>
         <p className="mt-2 max-w-2xl text-muted-foreground">
           Export the CSV template, fill one row per line item, then import to
-          generate all invoices as a ZIP of text-based PDFs.
+          generate all invoices as a ZIP of PDFs. Your seller profile is applied
+          automatically to every invoice.
         </p>
       </div>
 
       {/* Notice */}
-      <div className="mb-6 flex gap-3 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-200">
+      <div className="mb-8 flex gap-3 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-200">
         <Info className="mt-0.5 h-4 w-4 shrink-0" />
         <p>
           Bulk invoices are <strong>not synced</strong> to Google Drive or saved
-          locally. Keep your filled CSV as your record.
+          locally. Keep your filled CSV as your record. To sync individual
+          invoices, use the main Invoice Generator above.
         </p>
       </div>
-
-      {/* ── Seller profile block ── */}
+      
+      {/* Seller profile block */}
       <div className="mb-8 rounded-xl border border-border bg-secondary/40 p-5">
-        <p className="mb-2 text-sm font-semibold">Seller Profile Applied to All Bulk Invoices</p>
+        <h3 className="mb-1 font-semibold text-sm">Seller Profile for Bulk Invoices</h3>
         {bulkSeller ? (
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <p className="font-medium">{bulkSeller.name}</p>
-              {bulkSeller.gstin && (
-                <p className="text-xs text-muted-foreground">GSTIN: {bulkSeller.gstin}</p>
-              )}
-              {bulkSeller.address && (
-                <p className="text-xs text-muted-foreground">{bulkSeller.address}</p>
-              )}
+          <div className="mt-2 flex flex-wrap items-center justify-between gap-3">
+            <div className="text-sm">
+              <span className="font-medium">{bulkSeller.name}</span>
+              {bulkSeller.gstin && <span className="ml-2 text-muted-foreground text-xs">{bulkSeller.gstin}</span>}
             </div>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setBulkSeller(loadSellerProfile())}
-            >
-              <RefreshCw className="mr-2 h-3.5 w-3.5" /> Refresh
+            <Button variant="outline" size="sm" onClick={() => setBulkSeller(loadSellerProfile())}>
+              Refresh
             </Button>
           </div>
         ) : (
-          <div className="space-y-2">
-            <p className="text-sm text-destructive font-medium">No seller profile saved yet.</p>
-            <p className="text-xs text-muted-foreground">
-              Go to the <strong>Invoice Generator above</strong> → fill your business details
-              under "Your Business (Seller)" → click <strong>"Save as my default seller profile"</strong>
-              → come back here and click Refresh.
-            </p>
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() =>
-                  document.getElementById("invoice")?.scrollIntoView({ behavior: "smooth" })
-                }
-              >
-                Go to Invoice Generator ↑
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setBulkSeller(loadSellerProfile())}
-              >
-                <RefreshCw className="mr-2 h-3.5 w-3.5" /> Refresh
-              </Button>
-            </div>
+          <div className="mt-2 flex flex-wrap items-center gap-3">
+            <p className="text-sm text-destructive">No seller profile saved yet.</p>
+            <Button variant="outline" size="sm" onClick={() => {
+              document.getElementById("invoice")?.scrollIntoView({ behavior: "smooth" });
+            }}>
+              Go fill seller details ↑
+            </Button>
+            <p className="w-full text-xs text-muted-foreground">Fill your business details in the Invoice Generator above → click "Save as my default seller profile" → come back here and click Refresh.</p>
           </div>
         )}
-      </div>
-
+      </div>	  
+	   
       {/* Step cards */}
       <div className="grid gap-6 sm:grid-cols-3">
         {/* Step 1 */}
         <div className="surface-card p-6">
-          <div className="mb-3 flex h-9 w-9 items-center justify-center rounded-full bg-primary/10 text-sm font-bold text-primary">1</div>
+          <div className="mb-3 flex h-9 w-9 items-center justify-center rounded-full bg-primary/10 text-sm font-bold text-primary">
+            1
+          </div>
           <h3 className="mb-1 font-semibold">Export Template</h3>
           <p className="mb-4 text-sm text-muted-foreground">
-            Download the CSV template with sample rows. Rows sharing the same{" "}
-            <code className="rounded bg-muted px-1 text-xs">invoice_number</code> become one invoice with multiple items.
+            Download the CSV template with sample rows showing the format.
+            Rows sharing the same <code className="rounded bg-muted px-1 text-xs">invoice_number</code> become one invoice with multiple items.
           </p>
           <Button variant="outline" className="w-full" onClick={handleExportTemplate}>
             <Download className="mr-2 h-4 w-4" /> Download Template
@@ -673,7 +506,9 @@ export const BulkInvoice = () => {
 
         {/* Step 2 */}
         <div className="surface-card p-6">
-          <div className="mb-3 flex h-9 w-9 items-center justify-center rounded-full bg-primary/10 text-sm font-bold text-primary">2</div>
+          <div className="mb-3 flex h-9 w-9 items-center justify-center rounded-full bg-primary/10 text-sm font-bold text-primary">
+            2
+          </div>
           <h3 className="mb-1 font-semibold">Fill & Import CSV</h3>
           <p className="mb-4 text-sm text-muted-foreground">
             Fill the template in Excel or Google Sheets. Save as CSV, then import it here.
@@ -697,10 +532,12 @@ export const BulkInvoice = () => {
 
         {/* Step 3 */}
         <div className="surface-card p-6">
-          <div className="mb-3 flex h-9 w-9 items-center justify-center rounded-full bg-primary/10 text-sm font-bold text-primary">3</div>
+          <div className="mb-3 flex h-9 w-9 items-center justify-center rounded-full bg-primary/10 text-sm font-bold text-primary">
+            3
+          </div>
           <h3 className="mb-1 font-semibold">Generate ZIP</h3>
           <p className="mb-4 text-sm text-muted-foreground">
-            One text-based PDF per invoice, packed into a single ZIP file.
+            One PDF per invoice, packed into a single ZIP file ready to download.
             {isGenerating && (
               <span className="mt-1 block font-medium text-primary">
                 {progress.done} / {progress.total} invoices done…
@@ -731,13 +568,13 @@ export const BulkInvoice = () => {
 
       {/* Success */}
       {status === "done" && (
-        <div className="mt-6 flex gap-3 rounded-xl border border-green-200 bg-green-50 p-4 text-sm text-green-800 dark:border-green-800 dark:bg-green-950/40 dark:text-green-200">
-          <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-green-600" />
+        <div className="mt-6 flex gap-3 rounded-xl border border-success/30 bg-success/10 p-4 text-sm text-success-foreground">
+          <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-success" />
           <p>All {jobs.length} invoices generated and downloaded as a ZIP.</p>
         </div>
       )}
 
-      {/* Invoice list */}
+      {/* Invoice list preview */}
       {jobs.length > 0 && (
         <div className="mt-8">
           <h3 className="mb-3 font-semibold">
@@ -761,11 +598,11 @@ export const BulkInvoice = () => {
                     <td className="px-4 py-2 text-muted-foreground">{i + 1}</td>
                     <td className="px-4 py-2 font-mono text-xs">{job.invoiceNumber || "—"}</td>
                     <td className="px-4 py-2">{job.state.buyer.name || "—"}</td>
-                    <td className="px-4 py-2 text-muted-foreground">{formatDateDisplay(job.state.invoiceDate)}</td>
+                    <td className="px-4 py-2 text-muted-foreground">{job.state.invoiceDate}</td>
                     <td className="px-4 py-2 text-muted-foreground">{job.state.items.length}</td>
                     <td className="px-4 py-2">
                       {job.status === "done" ? (
-                        <span className="inline-flex items-center gap-1 text-green-600">
+                        <span className="inline-flex items-center gap-1 text-success">
                           <CheckCircle2 className="h-3.5 w-3.5" /> Done
                         </span>
                       ) : job.status === "error" ? (
@@ -781,6 +618,22 @@ export const BulkInvoice = () => {
           </div>
         </div>
       )}
+
+      {/* Hidden render target for html2canvas */}
+      <div
+        style={{
+          position: "fixed",
+          top: "-9999px",
+          left: "-9999px",
+          width: "794px", // A4 at 96dpi
+          zIndex: -1,
+          pointerEvents: "none",
+        }}
+      >
+        <div ref={previewRef}>
+          {currentPreview && <InvoicePreview state={currentPreview} />}
+        </div>
+      </div>
     </section>
   );
 };
