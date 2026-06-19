@@ -3,7 +3,6 @@ import react from "@vitejs/plugin-react-swc";
 import path from "path";
 import { componentTagger } from "lovable-tagger";
 
-// https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
   base: "/simpliinvoice-invoice-generator/",
   server: {
@@ -21,11 +20,12 @@ export default defineConfig(({ mode }) => ({
     dedupe: ["react", "react-dom", "react/jsx-runtime", "react/jsx-dev-runtime", "@tanstack/react-query", "@tanstack/query-core"],
   },
   optimizeDeps: {
-    exclude: ["@react-pdf/renderer"],
+    include: ["@react-pdf/renderer", "pako"],
   },
   build: {
     commonjsOptions: {
       transformMixedEsModules: true,
+      include: [/pako/, /@react-pdf/],
     },
   },
 }));
