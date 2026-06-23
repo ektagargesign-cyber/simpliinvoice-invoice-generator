@@ -6,7 +6,7 @@ const MARGIN_X_MM = 10;
 const MARGIN_TOP_MM = 10;
 const MARGIN_BOTTOM_MM = 12;
 const SECTION_GAP_MM = 2;
-const FIT_ONE_PAGE_THRESHOLD = 1.08;
+const FIT_ONE_PAGE_THRESHOLD = 1.3;
 
 type PdfExportOptions = { scale?: number; imageFormat?: "JPEG" | "PNG"; quality?: number };
 
@@ -165,6 +165,10 @@ class PdfLayout {
     private contentW: number,
     private contentH: number,
   ) {}
+  
+  willFit(height: number) {
+   return this.spaceLeft() >= height;
+  }
 
   spaceLeft(): number {
     return MARGIN_TOP_MM + this.contentH - this.cursorY;
@@ -234,17 +238,13 @@ async function renderSectionsToPdf(
   const flat = sectionSlices.flat();
   const totalH = flat.reduce((sum, s) => sum + s.imgH + SECTION_GAP_MM, 0);
   const scaleAll =
-    totalH > contentH && totalH <= contentH * FIT_ONE_PAGE_THRESHOLD
-      ? contentH / totalH
-      : 1;
+  totalH > contentH && totalH < contentH * 2
+    ? Math.min(1, contentH / totalH)
+    : 1;
 
   for (const group of sectionSlices) {
     const isClosing = group === sectionSlices[sectionSlices.length - 1];
     const groupH = group.reduce((sum, s) => sum + s.imgH * scaleAll + SECTION_GAP_MM, 0);
-
-    if (isClosing) {
-      layout.ensureSpace(groupH);
-    }
 
     group.forEach((slice, index) => {
       const scaled =
@@ -256,8 +256,8 @@ async function renderSectionsToPdf(
               imgH: slice.imgH * scaleAll,
             };
 
-      if (index > 0 && scaled.imgH > layout.spaceLeft()) {
-        layout.newPage();
+      if (!layout.willFit(scaled.imgH)) {
+       layout.newPage();
       }
 
       layout.addSlice(scaled);
@@ -308,12 +308,36 @@ async function renderElementToPdf(element: HTMLElement, options?: PdfExportOptio
   return renderSectionsToPdf(element, options);
 }
 
+function addPageNumbers(pdf: jsPDF) {
+  const pageCount = pdf.getNumberOfPages();
+
+  for (let i = 1; i <= pageCount; i++) {
+    pdf.setPage(i);
+
+    const pageWidth = pdf.internal.pageSize.getWidth();
+    const pageHeight = pdf.internal.pageSize.getHeight();
+
+    pdf.setFontSize(9);
+    pdf.setTextColor(120);
+
+    const text = `Page ${i} of ${pageCount}`;
+
+    pdf.text(
+      text,
+      pageWidth / 2,
+      pageHeight - 6,
+      { align: "center" }
+    );
+  }
+}
+
 export async function exportElementToPdf(
   element: HTMLElement,
   filename: string,
   options?: PdfExportOptions,
 ): Promise<void> {
   const pdf = await renderElementToPdf(element, options);
+  addPageNumbers(pdf);
   pdf.save(filename);
 }
 
