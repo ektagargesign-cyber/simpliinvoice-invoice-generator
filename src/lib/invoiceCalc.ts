@@ -66,6 +66,7 @@ export function computeInvoiceTotals(state: InvoiceState) {
     byRate.set(k, cur);
   });
 
+  const totalDiscount = rows.reduce((acc, r) => acc + (Number(r.item.discount) || 0), 0);
   const grand = Math.round(sum.total * 100) / 100;
   return {
     rows,
@@ -75,6 +76,7 @@ export function computeInvoiceTotals(state: InvoiceState) {
     grand,
     roundOff: Math.round(grand) - grand,
     payable: Math.round(grand),
+	totalDiscount,
     byRate: Array.from(byRate.entries()).map(([rate, v]) => ({ rate, ...v })),
   };
 }

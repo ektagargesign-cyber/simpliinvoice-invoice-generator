@@ -21,6 +21,8 @@ export interface Party {
   logoDataUrl?: string;      // seller-only; left undefined for buyer
   signatureDataUrl?: string; // seller-only; left undefined for buyer
   upiQrDataUrl?: string;     // seller-only; UPI QR code image
+  customHeaderDataUrl?: string;
+  customFooterDataUrl?: string;
   bankDetails?: BankDetails; // seller-only; left undefined for buyer
 }
 
