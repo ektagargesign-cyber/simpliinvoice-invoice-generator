@@ -29,8 +29,9 @@ function canvasToSlice(
   imageFormat: "JPEG" | "PNG",
   quality: number,
 ): CanvasSlice {
+  const ratio = canvas.width ? canvas.height / canvas.width : 1; 	
   const imgW = contentW;
-  const imgH = (canvas.height * imgW) / canvas.width;
+  const imgH = contentW * ratio;
   const imgData =
     imageFormat === "JPEG"
       ? canvas.toDataURL("image/jpeg", quality)
@@ -49,7 +50,9 @@ async function captureCanvas(
     backgroundColor: "#ffffff",
     logging: false,
     width: element.scrollWidth,
+	height: element.scrollHeight,
     windowWidth: element.scrollWidth,
+	windowHeight: element.scrollHeight,
   });
 }
 
@@ -186,6 +189,15 @@ class PdfLayout {
   }
 
   addSlice(slice: CanvasSlice) {
+	  
+	if (
+	    !isFinite(slice.imgW) ||
+	    !isFinite(slice.imgH) ||
+	    slice.imgW <= 0 ||
+	    slice.imgH <= 0
+  	) {
+	    return;
+	  }  
     this.ensureSpace(slice.imgH);
     this.pdf.addImage(
       slice.imgData,
