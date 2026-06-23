@@ -57,6 +57,13 @@ export const InvoiceGenerator = () => {
     try {
       const seller = state.seller.name.trim().replace(/\s+/g, "-") || "Invoice";
       const invoiceNo = (state.invoiceNumber.trim() || "Draft").replace(/\//g, "-");
+	  console.log({
+  	    ua: navigator.userAgent,
+  	    maxTouchPoints: navigator.maxTouchPoints,
+  	    innerWidth: window.innerWidth,
+  	    isMobileUA: /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent),
+  	    isTouchOnly: navigator.maxTouchPoints > 1 && window.innerWidth < 1024,
+	    });
       await exportElementToPdf(el, `${seller}_${invoiceNo}_SimpliInvoice.pdf`);
       toast.dismiss(toastId);
       toast.success("PDF saved!");
