@@ -180,10 +180,6 @@ class PdfLayout {
   }
 
   ensureSpace(needed: number) {
-    if (needed > this.contentH) {
-      this.newPage();
-      return;
-    }
     if (this.cursorY + needed > MARGIN_TOP_MM + this.contentH) {
       this.newPage();
     }
@@ -236,8 +232,7 @@ async function renderSectionsToPdf(
   }
 
   const flat = sectionSlices.flat();
-  const totalH = flat.reduce((sum, s) => sum + s.imgH + SECTION_GAP_MM, 0);
-  const scaleAll = 1;
+  
 
   for (const group of sectionSlices) {
     const groupH = group.reduce((sum, s) => sum + s.imgH * scaleAll + SECTION_GAP_MM, 0);
@@ -248,8 +243,8 @@ async function renderSectionsToPdf(
           ? slice
           : {
               ...slice,
-              imgW: slice.imgW * scaleAll,
-              imgH: slice.imgH * scaleAll,
+              imgW: slice.imgW,
+              imgH: slice.imgH,
             };
 
       
