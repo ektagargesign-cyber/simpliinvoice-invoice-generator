@@ -18,7 +18,7 @@ import { emptyState } from "@/lib/invoiceDefaults";
 import { loadSellerProfile } from "@/lib/storage";
 import { InvoicePreview } from "@/components/InvoicePreview";
 import { Button } from "@/components/ui/button";
-import { Download, Upload, FileSpreadsheet, AlertCircle, CheckCircle2, Loader2, Info } from "lucide-react";
+import { exportElementToPdfBlob } from "@/lib/pdfExport";
 
 // ─── CSV column definitions ────────────────────────────────────────────────
 // Each column maps to a field in InvoiceState.
@@ -358,12 +358,7 @@ export const BulkInvoice = () => {
 
     try {
       // Dynamically import heavy libs so they don't affect initial page load
-      const [{ default: jsPDF }, { default: html2canvas }, { default: JSZip }] =
-        await Promise.all([
-          import("jspdf"),
-          import("html2canvas"),
-          import("jszip"),
-        ]);
+      const [{ default: JSZip }] = await Promise.all([import("jszip")]);
 
       const zip = new JSZip();
 
@@ -377,34 +372,13 @@ export const BulkInvoice = () => {
 
         if (!previewRef.current) continue;
 
-        const canvas = await html2canvas(previewRef.current, {
+        const pdfBlob = await exportElementToPdfBlob(previewRef.current, {
           scale: 3,
-          useCORS: true,
-          backgroundColor: "#ffffff",
-          logging: false,
+          imageFormat: "PNG",
         });
 
-        const imgData = canvas.toDataURL("image/png");
-        const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
-
-        const pageW = pdf.internal.pageSize.getWidth();
-        const pageH = pdf.internal.pageSize.getHeight();
-        const imgW = pageW;
-        const imgH = (canvas.height * pageW) / canvas.width;
-
-        let yPos = 0;
-        let remaining = imgH;
-
-        // Multi-page support: slice image across pages
-        while (remaining > 0) {
-          pdf.addImage(imgData, "PNG", 0, -yPos, imgW, imgH);
-          remaining -= pageH;
-          yPos += pageH;
-          if (remaining > 0) pdf.addPage();
-        }
-
         const filename = `${job.invoiceNumber || `invoice-${i + 1}`}.pdf`;
-        zip.file(filename, pdf.output("blob"));
+        zip.file(filename, pdfBlob);
 
         setJobs((prev) =>
           prev.map((j, idx) => (idx === i ? { ...j, status: "done" } : j))

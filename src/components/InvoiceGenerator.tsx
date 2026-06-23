@@ -9,6 +9,7 @@ import { InvoicePreview } from "./InvoicePreview";
 import { GoogleSyncButton } from "./GoogleSyncButton";
 import { Button } from "@/components/ui/button";
 import { Download, RotateCcw, Eye } from "lucide-react";
+import { exportElementToPdf } from "@/lib/pdfExport";
 import { toast } from "sonner";
 
 export const InvoiceGenerator = () => {
@@ -54,23 +55,9 @@ export const InvoiceGenerator = () => {
     if (!el) { window.print(); return; }
     const toastId = toast.loading("Generating PDF…");
     try {
-      const { default: html2canvas } = await import("html2canvas");
-      const { default: jsPDF } = await import("jspdf");
-      const canvas = await html2canvas(el, { scale: 2, useCORS: true, backgroundColor: "#ffffff", logging: false });
-      const imgData = canvas.toDataURL("image/jpeg", 0.92);
-      const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
-      const pageW = pdf.internal.pageSize.getWidth();
-      const pageH = pdf.internal.pageSize.getHeight();
-      const imgH = (canvas.height * pageW) / canvas.width;
-      let yPos = 0, remaining = imgH;
-      while (remaining > 0) {
-        pdf.addImage(imgData, "JPEG", 0, -yPos, pageW, imgH);
-        remaining -= pageH; yPos += pageH;
-        if (remaining > 0) pdf.addPage();
-      }
       const seller = state.seller.name.trim().replace(/\s+/g, "-") || "Invoice";
       const invoiceNo = (state.invoiceNumber.trim() || "Draft").replace(/\//g, "-");
-      pdf.save(`${seller}_${invoiceNo}_SimpliInvoice.pdf`);
+      await exportElementToPdf(el, `${seller}_${invoiceNo}_SimpliInvoice.pdf`);
       toast.dismiss(toastId);
       toast.success("PDF saved!");
     } catch {

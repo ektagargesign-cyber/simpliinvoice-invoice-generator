@@ -6,11 +6,14 @@ import { FileText } from "lucide-react";
 interface Props { state: InvoiceState; }
 
 const Row = ({ label, value, strong = false }: { label: string; value: string; strong?: boolean }) => (
-  <div className={`flex justify-between gap-4 text-sm ${strong ? "font-semibold" : ""}`}>
-    <span className="text-muted-foreground">{label}</span>
-    <span>{value}</span>
+  <div className={`flex justify-between gap-2 py-0.5 text-xs ${strong ? "font-semibold" : ""}`}>
+    <span className="shrink-0 text-muted-foreground">{label}</span>
+    <span className="text-right">{value}</span>
   </div>
 );
+
+const cellNarrow = "invoice-cell-narrow border border-slate-200 px-1 py-1.5";
+const cellText = "border border-slate-200 px-2 py-1.5";
 
 export const InvoicePreview = ({ state }: Props) => {
   const t = computeInvoiceTotals(state);
@@ -21,6 +24,7 @@ export const InvoicePreview = ({ state }: Props) => {
 
   return (
     <div id="invoice-preview-root" className="invoice-print mx-auto w-full max-w-[850px] overflow-hidden rounded-2xl border border-border bg-white text-slate-900 shadow-lg-soft dark:bg-slate-50">
+      <div data-pdf-section="header">
       {state.seller.customHeaderDataUrl && (
         <img src={state.seller.customHeaderDataUrl} alt="Invoice header"
           className="w-full object-cover" style={{ maxHeight: "150px" }} />
@@ -58,8 +62,10 @@ export const InvoicePreview = ({ state }: Props) => {
         </div>
       </div>
 	  )}
+      </div>
       
-	  <div className="px-7 py-6">
+	  <div className="px-7 py-4">
+        <div data-pdf-section="parties">
         {/* Parties */}
         <div className={`grid gap-6 ${state.shipToEnabled ? "sm:grid-cols-3" : "sm:grid-cols-2"}`}>
           <div>
@@ -101,60 +107,62 @@ export const InvoicePreview = ({ state }: Props) => {
           <div><span className="text-slate-500">Tax Type:</span> <strong>{showGst ? (t.intraState ? "CGST + SGST" : "IGST") : "—"}</strong></div>
           <div><span className="text-slate-500">Document:</span> <strong>{docTitle}</strong></div>
         </div>
+        </div>
 
         {/* Items table */}
-        <div className="mt-5 overflow-x-auto">
-          <table className="w-full border-collapse text-[10px]" style={{tableLayout:"fixed"}}>
+        <div data-pdf-section="items" className="mt-4 overflow-hidden">
+          <table className="invoice-items-table w-full border-collapse text-[10px]" style={{ tableLayout: "fixed" }}>
             <thead>
               <tr className="bg-slate-100 text-left text-slate-700">
-                <th className="border border-slate-200 px-1 py-2 w-[4%]">#</th>
-                <th className="border border-slate-200 px-2 py-2 w-[28%]">Description</th>
-                <th className="border border-slate-200 px-1 py-2 w-[8%]">HSN/SAC</th>
-                <th className="border border-slate-200 px-1 py-2 w-[5%] text-right">Qty</th>
-                <th className="border border-slate-200 px-1 py-2 w-[8%] text-right">Rate</th>
-                <th className="border border-slate-200 px-1 py-2 w-[7%] text-right">Disc</th>
-                <th className="border border-slate-200 px-1 py-2 w-[10%] text-right">Taxable</th>
+                <th className={`${cellNarrow} w-[4%]`}>#</th>
+                <th className={`${cellText} w-[26%]`}>Description</th>
+                <th className={`${cellNarrow} w-[9%]`}>HSN/SAC</th>
+                <th className={`${cellNarrow} w-[7%] text-right`}>Qty</th>
+                <th className={`${cellNarrow} w-[8%] text-right`}>Rate</th>
+                <th className={`${cellNarrow} w-[7%] text-right`}>Disc</th>
+                <th className={`${cellNarrow} w-[9%] text-right`}>Taxable</th>
                 {showGst && t.intraState && (<>
-                  <th className="border border-slate-200 px-1 py-2 w-[10%] text-right">CGST</th>
-                  <th className="border border-slate-200 px-1 py-2 w-[10%] text-right">SGST</th>
+                  <th className={`${cellNarrow} w-[9%] text-right`}>CGST</th>
+                  <th className={`${cellNarrow} w-[9%] text-right`}>SGST</th>
                 </>)}
                 {showGst && !t.intraState && (
-                  <th className="border border-slate-200 px-1 py-2 w-[10%] text-right">IGST</th>
+                  <th className={`${cellNarrow} w-[9%] text-right`}>IGST</th>
                 )}
-                <th className="border border-slate-200 px-1 py-2 w-[10%] text-right">Total</th>
+                <th className={`${cellNarrow} w-[9%] text-right`}>Total</th>
               </tr>
             </thead>
             <tbody>
               {t.rows.map((r, i) => (
-                <tr key={r.item.id}>
-                  <td className="border border-slate-200 px-1 py-2">{i + 1}</td>
-                  <td className="border border-slate-200 px-1 py-2">{r.item.description || <span className="text-slate-400">Item description</span>}</td>
-                  <td className="border border-slate-200 px-1 py-2">{r.item.hsn || "—"}</td>
-                  <td className="border border-slate-200 px-1 py-2 text-right">{r.item.qty || 0}</td>
-                  <td className="border border-slate-200 px-1 py-2 text-right">{formatNum(r.item.rate)}</td>
-                  <td className="border border-slate-200 px-1 py-2 text-right">{formatNum(r.item.discount)}</td>
-                  <td className="border border-slate-200 px-1 py-2 text-right">{formatNum(r.totals.taxable)}</td>
+                <tr key={r.item.id} data-pdf-item-row>
+                  <td className={cellNarrow}>{i + 1}</td>
+                  <td className={`${cellText} break-words`}>{r.item.description || <span className="text-slate-400">Item description</span>}</td>
+                  <td className={`${cellNarrow} text-right`} title={r.item.hsn || undefined}>{r.item.hsn || "—"}</td>
+                  <td className={`${cellNarrow} text-right`} title={String(r.item.qty || 0)}>{r.item.qty || 0}</td>
+                  <td className={`${cellNarrow} text-right`}>{formatNum(r.item.rate)}</td>
+                  <td className={`${cellNarrow} text-right`}>{formatNum(r.item.discount)}</td>
+                  <td className={`${cellNarrow} text-right`}>{formatNum(r.totals.taxable)}</td>
                   {showGst && t.intraState && (<>
-                    <td className="border border-slate-200 px-1 py-2 text-right">{formatNum(r.totals.cgst)} <span className="text-[10px] text-slate-500">({(r.item.gstRate/2)}%)</span></td>
-                    <td className="border border-slate-200 px-1 py-2 text-right">{formatNum(r.totals.sgst)} <span className="text-[10px] text-slate-500">({(r.item.gstRate/2)}%)</span></td>
+                    <td className={`${cellNarrow} text-right`}>{formatNum(r.totals.cgst)} <span className="text-[9px] text-slate-500">({(r.item.gstRate/2)}%)</span></td>
+                    <td className={`${cellNarrow} text-right`}>{formatNum(r.totals.sgst)} <span className="text-[9px] text-slate-500">({(r.item.gstRate/2)}%)</span></td>
                   </>)}
                   {showGst && !t.intraState && (
-                    <td className="border border-slate-200 px-1 py-2 text-right">{formatNum(r.totals.igst)} <span className="text-[10px] text-slate-500">({r.item.gstRate}%)</span></td>
+                    <td className={`${cellNarrow} text-right`}>{formatNum(r.totals.igst)} <span className="text-[9px] text-slate-500">({r.item.gstRate}%)</span></td>
                   )}
-                  <td className="border border-slate-200 px-1 py-2 text-right font-semibold">{formatNum(r.totals.total)}</td>
+                  <td className={`${cellNarrow} text-right font-semibold`}>{formatNum(r.totals.total)}</td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
 
-        {/* Tax summary + totals */}
-        <div className="mt-5 grid gap-5 sm:grid-cols-2">
-          <div>
+        <div data-pdf-section="closing">
+        {/* Tax summary + totals — totals right-aligned, no empty half-page column */}
+        <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div className="min-w-0 flex-1">
             {showGst && t.byRate.length > 1 && (
-              <div className="rounded-lg border border-slate-200 p-3">
-                <div className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-slate-500">GST Summary</div>
-                <table className="w-full text-xs">
+              <div className="rounded-lg border border-slate-200 p-2">
+                <div className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-slate-500">GST Summary</div>
+                <table className="w-full text-[11px]">
                   <thead>
                     <tr className="text-slate-600">
                       <th className="text-left">Rate</th>
@@ -176,18 +184,18 @@ export const InvoicePreview = ({ state }: Props) => {
             )}
 
             {state.sellerType === "composition" && (
-              <div className="mt-3 rounded-lg border border-amber-300 bg-amber-50 p-3 text-xs text-amber-900">
+              <div className="rounded-lg border border-amber-300 bg-amber-50 p-2 text-[11px] text-amber-900">
                 <strong>Composition taxable person, not eligible to collect tax on supplies.</strong>
               </div>
             )}
             {state.sellerType === "unregistered" && (
-              <div className="mt-3 rounded-lg border border-slate-200 bg-slate-50 p-3 text-xs text-slate-700">
+              <div className="rounded-lg border border-slate-200 bg-slate-50 p-2 text-[11px] text-slate-700">
                 This is a non-GST invoice issued by an unregistered person. GST is not applicable.
               </div>
             )}
           </div>
 
-          <div className="rounded-lg border border-slate-200 p-3">
+          <div className="invoice-totals-box ml-auto w-full max-w-[220px] shrink-0 rounded-lg border border-slate-200 p-2">
             <Row label="Taxable Value" value={formatNum(t.summary.taxable)} />
             {showGst && t.intraState && (<>
               <Row label="CGST" value={formatNum(t.summary.cgst)} />
@@ -198,12 +206,12 @@ export const InvoicePreview = ({ state }: Props) => {
 			  <Row label="Total Discount" value={`(-) ${formatNum(t.totalDiscount)}`} />
 			)}
             <Row label="Round Off" value={formatNum(t.roundOff)} />
-            <div className="mt-2 flex justify-between border-t border-slate-200 pt-2 text-base font-bold">
+            <div className="mt-1 flex justify-between border-t border-slate-200 pt-1 text-sm font-bold">
               <span>Grand Total</span>
               <span>₹ {formatNum(t.payable)}</span>
             </div>
             {state.amountReceived > 0 && (
-              <div className="mt-2 space-y-1 border-t border-dashed border-slate-200 pt-2">
+              <div className="mt-1 space-y-0.5 border-t border-dashed border-slate-200 pt-1">
                 <Row label={`Amount Received${state.receiptMode ? ` (${state.receiptMode})` : ""}`} value={`₹ ${formatNum(state.amountReceived)}`} />
                 <Row label="Amount Due" value={`₹ ${formatNum(calculateAmountDue(t.payable, state.amountReceived))}`} strong />
                 {state.amountReceived > t.payable && (
@@ -215,7 +223,7 @@ export const InvoicePreview = ({ state }: Props) => {
         </div>
 
         {/* Amount in words */}
-        <div className="mt-4 rounded-lg bg-slate-50 p-3 text-xs">
+        <div className="mt-3 rounded-lg bg-slate-50 p-2 text-xs">
           <span className="text-slate-500">Amount in words: </span>
           <strong>{numberToIndianWords(t.payable)}</strong>
         </div>
@@ -262,29 +270,29 @@ export const InvoicePreview = ({ state }: Props) => {
         )}
 
   
-        {/* Notes & Terms & Signatory */}
-        <div className="mt-5 grid gap-4 sm:grid-cols-2">
+        {/* Notes & Terms & Signatory — kept compact so footer stays on one page */}
+        <div className="invoice-footer-block mt-3 grid gap-3 sm:grid-cols-2">
           <div>
             {state.notes && (<>
               <div className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">Notes</div>
               <div className="whitespace-pre-line text-xs text-slate-700">{state.notes}</div>
             </>)}
             {state.terms && (
-              <div className="mt-3">
+              <div className={state.notes ? "mt-2" : ""}>
                 <div className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">Terms & Conditions</div>
-                <div className="whitespace-pre-line text-xs text-slate-700">{state.terms}</div>
+                <div className="whitespace-pre-line text-xs leading-snug text-slate-700">{state.terms}</div>
               </div>
             )}
           </div>
           <div className="flex flex-col items-end justify-end">
-            <div className="mt-10 w-48 border-t border-slate-300 pt-2 text-center text-xs">
+            <div className="mt-2 w-44 border-t border-slate-300 pt-1.5 text-center text-xs">
               For <strong>{state.seller.name || "Your Business"}</strong>
               {state.seller.signatureDataUrl ? (
-                <div className="mt-2 flex justify-center">
-                  <img src={state.seller.signatureDataUrl} alt="Signature" className="max-h-12 w-auto max-w-[160px] object-contain" />
+                <div className="mt-1 flex justify-center">
+                  <img src={state.seller.signatureDataUrl} alt="Signature" className="max-h-10 w-auto max-w-[140px] object-contain" />
                 </div>
               ) : (
-                <div className="mt-6" />
+                <div className="mt-4" />
               )}
               <div className="text-[11px] text-slate-600">{state.signatory || "Authorised Signatory"}</div>
             </div>
@@ -294,10 +302,11 @@ export const InvoicePreview = ({ state }: Props) => {
         {state.seller.customFooterDataUrl && (
           <img src={state.seller.customFooterDataUrl} alt="Invoice footer" className="mt-5 w-full object-cover rounded-lg" style={{ maxHeight: "120px" }} />
         )}
-        <div className="mt-3 border-t border-slate-200 pt-3 text-center text-[10px] text-slate-400">
+        <div className="mt-2 border-t border-slate-200 pt-2 text-center text-[10px] text-slate-400">
           <a href="https://simpliinvoice-invoice-generator.vercel.app" target="_blank" rel="noopener noreferrer">
             Generated with SimpliInvoice · simpliinvoice-invoice-generator.vercel.app
           </a>
+        </div>
         </div>
       </div>
     </div>
