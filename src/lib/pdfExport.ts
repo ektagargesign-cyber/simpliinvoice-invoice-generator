@@ -105,6 +105,7 @@ async function captureItemsSection(
   opts: Required<Pick<PdfExportOptions, "scale" | "imageFormat" | "quality">>,
   contentW: number,
   contentH: number,
+  firstPageAvailableH?: number,
 ): Promise<CanvasSlice[]> {
   const table = section.querySelector("table");
   if (!table) {
@@ -123,8 +124,15 @@ async function captureItemsSection(
   const widthPx = section.getBoundingClientRect().width || section.clientWidth || 850;
   const slices: CanvasSlice[] = [];
   let index = 0;
+  let isFirstChunk = true;
 
   while (index < rows.length) {
+    // For the first chunk, respect remaining space on the current page;
+    // subsequent chunks get the full page height.
+    const availableH = isFirstChunk && firstPageAvailableH != null && firstPageAvailableH > 0
+      ? firstPageAvailableH
+      : contentH;
+
     let batch: HTMLTableRowElement[] = [rows[index]];
 
     while (index + batch.length < rows.length) {
@@ -138,7 +146,7 @@ async function captureItemsSection(
         opts.imageFormat,
         opts.quality,
       );
-      if (height > contentH) break;
+      if (height > availableH) break;
       batch = candidate;
     }
 
@@ -152,6 +160,7 @@ async function captureItemsSection(
     slices.push(canvasToSlice(canvas, contentW, opts.imageFormat, opts.quality));
 
     index += batch.length;
+    isFirstChunk = false;
   }
 
   return slices;
@@ -221,40 +230,29 @@ async function renderSectionsToPdf(
     return renderMonolithicToPdf(root, options);
   }
 
-  const sectionSlices: CanvasSlice[][] = [];
-
+  // Capture non-items sections first so we can measure layout state before items.
+  // We process sections in order, rendering each to the layout immediately so that
+  // spaceLeft() accurately reflects how much room remains when the items section starts.
   for (const section of sections) {
     const kind = section.getAttribute("data-pdf-section");
     if (kind === "items") {
-      sectionSlices.push(
-        await captureItemsSection(section, { scale, imageFormat, quality }, contentW, contentH),
+      // Pass remaining space on the current page so the first chunk fits snugly
+      // rather than being sized for a full page and then pushed to the next page.
+      const firstPageAvailableH = layout.spaceLeft();
+      const itemSlices = await captureItemsSection(
+        section,
+        { scale, imageFormat, quality },
+        contentW,
+        contentH,
+        firstPageAvailableH,
       );
+      for (const slice of itemSlices) {
+        layout.addSlice(slice);
+      }
     } else {
       const canvas = await captureCanvas(section, scale);
-      sectionSlices.push([canvasToSlice(canvas, contentW, imageFormat, quality)]);
+      layout.addSlice(canvasToSlice(canvas, contentW, imageFormat, quality));
     }
-  }
-
-  const flat = sectionSlices.flat();
-  const totalH = flat.reduce((sum, s) => sum + s.imgH + SECTION_GAP_MM, 0);
-  const scaleAll = 1;
-
-  for (const group of sectionSlices) {
-    const groupH = group.reduce((sum, s) => sum + s.imgH * scaleAll + SECTION_GAP_MM, 0);
-
-    group.forEach((slice, index) => {
-      const scaled =
-        scaleAll === 1
-          ? slice
-          : {
-              ...slice,
-              imgW: slice.imgW * scaleAll,
-              imgH: slice.imgH * scaleAll,
-            };
-
-      
-      layout.addSlice(scaled);
-    });
   }
 
   return pdf;
