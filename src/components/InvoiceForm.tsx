@@ -142,6 +142,28 @@ export const InvoiceForm = ({ state, setState, syncKey }: Props) => {
     }
   };
   const removeUpiQr = () => setState((s) => ({ ...s, seller: { ...s.seller, upiQrDataUrl: undefined } }));
+  
+  const handleHeaderUpload = async (file: File | undefined) => {
+    if (!file) return;
+    try {
+      const dataUrl = await fileToResizedDataUrl(file, 794, 150);
+      setState((s) => ({ ...s, seller: { ...s.seller, customHeaderDataUrl: dataUrl } }));
+    } catch {
+      toast.error("Couldn't process that image — try a different file");
+    }
+  };
+  const removeHeader = () => setState((s) => ({ ...s, seller: { ...s.seller, customHeaderDataUrl: undefined } }));
+  
+  const handleFooterUpload = async (file: File | undefined) => {
+    if (!file) return;
+    try {
+      const dataUrl = await fileToResizedDataUrl(file, 794, 120);
+      setState((s) => ({ ...s, seller: { ...s.seller, customFooterDataUrl: dataUrl } }));
+    } catch {
+      toast.error("Couldn't process that image — try a different file");
+    }
+  };
+  const removeFooter = () => setState((s) => ({ ...s, seller: { ...s.seller, customFooterDataUrl: undefined } }));
 
 
   const updateShip = (field: keyof ShipTo, value: string) =>
@@ -342,6 +364,40 @@ export const InvoiceForm = ({ state, setState, syncKey }: Props) => {
               </label>
             )}
           </Field>
+		  
+		  <Field label="Custom Header Image (optional)">
+		    {state.seller.customHeaderDataUrl ? (
+		      <div className="flex items-center gap-3 rounded-lg border border-border bg-secondary/30 p-2.5">
+		        <img src={state.seller.customHeaderDataUrl} alt="Header preview" className="h-10 w-auto max-w-[200px] rounded object-contain" />
+		        <Button type="button" variant="ghost" size="sm" onClick={removeHeader} className="text-destructive hover:text-destructive">
+		          <X className="mr-1 h-3.5 w-3.5" /> Remove
+		        </Button>
+		      </div>
+		    ) : (
+		      <label className="flex cursor-pointer items-center gap-2 rounded-lg border border-dashed border-border bg-secondary/30 p-3 text-sm text-muted-foreground hover:bg-secondary/50">
+		        <ImageIcon className="h-4 w-4" />
+		        Upload header image (PNG/JPG)
+		        <input type="file" accept="image/*" className="hidden" onChange={(e) => handleHeaderUpload(e.target.files?.[0])} />
+		      </label>
+		    )}
+		  </Field>
+		  
+		  <Field label="Custom Footer Image (optional)">
+  		  {state.seller.customFooterDataUrl ? (
+		      <div className="flex items-center gap-3 rounded-lg border border-border bg-secondary/30 p-2.5">
+		        <img src={state.seller.customFooterDataUrl} alt="Footer preview" className="h-10 w-auto max-w-[200px] rounded object-contain" />
+		        <Button type="button" variant="ghost" size="sm" onClick={removeFooter} className="text-destructive hover:text-destructive">
+		          <X className="mr-1 h-3.5 w-3.5" /> Remove
+		        </Button>
+		      </div>
+		    ) : (
+		      <label className="flex cursor-pointer items-center gap-2 rounded-lg border border-dashed border-border bg-secondary/30 p-3 text-sm text-muted-foreground hover:bg-secondary/50">
+		        <ImageIcon className="h-4 w-4" />
+		        Upload footer image (PNG/JPG)
+		        <input type="file" accept="image/*" className="hidden" onChange={(e) => handleFooterUpload(e.target.files?.[0])} />
+		      </label>
+		    )}
+		  </Field>
         </div>
 
         <div className="mt-4">

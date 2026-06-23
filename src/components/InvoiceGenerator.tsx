@@ -8,7 +8,7 @@ import { InvoiceForm } from "./InvoiceForm";
 import { InvoicePreview } from "./InvoicePreview";
 import { GoogleSyncButton } from "./GoogleSyncButton";
 import { Button } from "@/components/ui/button";
-import { Printer, RotateCcw, Eye } from "lucide-react";
+import { Download, RotateCcw, Eye } from "lucide-react";
 import { toast } from "sonner";
 
 export const InvoiceGenerator = () => {
@@ -49,14 +49,34 @@ export const InvoiceGenerator = () => {
     setSyncKey((k) => k + 1);
   };
 
-  const handlePrint = () => {
-    const seller = state.seller.name.trim() || "Seller";
-    const invoiceNo = (state.invoiceNumber.trim() || "Draft").replace(/\//g, "-");
-    const customTitle = `${seller}_${invoiceNo}_SimpliInvoice_Free GST Invoice Generator`;
-    const originalTitle = document.title;
-    document.title = customTitle;
-    window.print();
-    setTimeout(() => { document.title = originalTitle; }, 1000);
+  const handlePrint = async () => {
+    const el = document.getElementById("invoice-preview-root");
+    if (!el) { window.print(); return; }
+    const toastId = toast.loading("Generating PDF…");
+    try {
+      const { default: html2canvas } = await import("html2canvas");
+      const { default: jsPDF } = await import("jspdf");
+      const canvas = await html2canvas(el, { scale: 2, useCORS: true, backgroundColor: "#ffffff", logging: false });
+      const imgData = canvas.toDataURL("image/jpeg", 0.92);
+      const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+      const pageW = pdf.internal.pageSize.getWidth();
+      const pageH = pdf.internal.pageSize.getHeight();
+      const imgH = (canvas.height * pageW) / canvas.width;
+      let yPos = 0, remaining = imgH;
+      while (remaining > 0) {
+        pdf.addImage(imgData, "JPEG", 0, -yPos, pageW, imgH);
+        remaining -= pageH; yPos += pageH;
+        if (remaining > 0) pdf.addPage();
+      }
+      const seller = state.seller.name.trim().replace(/\s+/g, "-") || "Invoice";
+      const invoiceNo = (state.invoiceNumber.trim() || "Draft").replace(/\//g, "-");
+      pdf.save(`${seller}_${invoiceNo}_SimpliInvoice.pdf`);
+      toast.dismiss(toastId);
+      toast.success("PDF saved!");
+    } catch {
+      toast.dismiss(toastId);
+      toast.error("PDF generation failed — try again.");
+    }
   };
   
   const handleReset = () => {
@@ -79,7 +99,7 @@ export const InvoiceGenerator = () => {
           <GoogleSyncButton onSynced={handleSynced} />
           <Button variant="outline" onClick={handleReset}><RotateCcw className="mr-2 h-4 w-4" /> Reset</Button>
           <Button onClick={handlePrint} className="bg-gradient-primary text-primary-foreground shadow-glow hover:opacity-90">
-            <Printer className="mr-2 h-4 w-4" /> Print / Save PDF
+            <Download className="mr-2 h-4 w-4" /> Save PDF
           </Button>
         </div>
       </div>
