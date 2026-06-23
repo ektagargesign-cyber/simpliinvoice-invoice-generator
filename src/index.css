@@ -128,6 +128,20 @@
   .accent-pill {
     @apply inline-flex items-center gap-2 rounded-full border border-border bg-secondary/60 px-3 py-1 text-xs font-medium text-secondary-foreground backdrop-blur;
   }
+
+  /* Invoice table: keep narrow columns inside fixed layout */
+  .invoice-cell-narrow {
+    overflow: hidden;
+    overflow-wrap: anywhere;
+    word-break: break-all;
+    hyphens: auto;
+    max-width: 0;
+  }
+
+  .invoice-items-table th,
+  .invoice-items-table td {
+    vertical-align: top;
+  }
 }
 
 /* Print styles for A4 invoice */
