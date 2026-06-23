@@ -29,9 +29,8 @@ function canvasToSlice(
   imageFormat: "JPEG" | "PNG",
   quality: number,
 ): CanvasSlice {
-  const ratio = canvas.width ? canvas.height / canvas.width : 1; 	
   const imgW = contentW;
-  const imgH = contentW * ratio;
+  const imgH = (canvas.height * imgW) / canvas.width;
   const imgData =
     imageFormat === "JPEG"
       ? canvas.toDataURL("image/jpeg", quality)
@@ -50,9 +49,7 @@ async function captureCanvas(
     backgroundColor: "#ffffff",
     logging: false,
     width: element.scrollWidth,
-	height: element.scrollHeight,
     windowWidth: element.scrollWidth,
-	windowHeight: element.scrollHeight,
   });
 }
 
@@ -183,21 +180,16 @@ class PdfLayout {
   }
 
   ensureSpace(needed: number) {
+    if (needed > this.contentH) {
+      this.newPage();
+      return;
+    }
     if (this.cursorY + needed > MARGIN_TOP_MM + this.contentH) {
       this.newPage();
     }
   }
 
   addSlice(slice: CanvasSlice) {
-	  
-	if (
-	    !isFinite(slice.imgW) ||
-	    !isFinite(slice.imgH) ||
-	    slice.imgW <= 0 ||
-	    slice.imgH <= 0
-  	) {
-	    return;
-	  }  
     this.ensureSpace(slice.imgH);
     this.pdf.addImage(
       slice.imgData,
@@ -244,7 +236,8 @@ async function renderSectionsToPdf(
   }
 
   const flat = sectionSlices.flat();
-  
+  const totalH = flat.reduce((sum, s) => sum + s.imgH + SECTION_GAP_MM, 0);
+  const scaleAll = 1;
 
   for (const group of sectionSlices) {
     const groupH = group.reduce((sum, s) => sum + s.imgH * scaleAll + SECTION_GAP_MM, 0);
@@ -255,8 +248,8 @@ async function renderSectionsToPdf(
           ? slice
           : {
               ...slice,
-              imgW: slice.imgW,
-              imgH: slice.imgH,
+              imgW: slice.imgW * scaleAll,
+              imgH: slice.imgH * scaleAll,
             };
 
       
