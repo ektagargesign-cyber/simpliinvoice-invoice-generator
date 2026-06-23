@@ -148,13 +148,11 @@
 @media print {
   @page { size: A4; margin: 12mm; }
 
-  html, body, div.min-h-screen {
+  html, body {
     background: white !important;
     margin: 0 !important;
     padding: 0 !important;
-    height: auto !important;
-    min-height: 0 !important;
-  }
+   }
 
   /* Exact structure (confirmed from Index.tsx):
        div.min-h-screen
