@@ -237,13 +237,9 @@ async function renderSectionsToPdf(
 
   const flat = sectionSlices.flat();
   const totalH = flat.reduce((sum, s) => sum + s.imgH + SECTION_GAP_MM, 0);
-  const scaleAll =
-  totalH > contentH && totalH < contentH * 2
-    ? Math.min(1, contentH / totalH)
-    : 1;
+  const scaleAll = 1;
 
   for (const group of sectionSlices) {
-    const isClosing = group === sectionSlices[sectionSlices.length - 1];
     const groupH = group.reduce((sum, s) => sum + s.imgH * scaleAll + SECTION_GAP_MM, 0);
 
     group.forEach((slice, index) => {
@@ -256,10 +252,7 @@ async function renderSectionsToPdf(
               imgH: slice.imgH * scaleAll,
             };
 
-      if (!layout.willFit(scaled.imgH)) {
-       layout.newPage();
-      }
-
+      
       layout.addSlice(scaled);
     });
   }
